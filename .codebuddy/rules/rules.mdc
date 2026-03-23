@@ -1,0 +1,13 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-03-18T08:52:22.849Z
+provider: 
+---
+
+- 使用 Vue3 + Vite
+- 使用 Element Plus
+- 使用 Axios 请求后端
+- 组件化开发
+- 使用 Composition API

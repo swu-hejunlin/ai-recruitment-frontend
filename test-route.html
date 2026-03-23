@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路由测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #409eff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e4e7ed;
+            border-radius: 6px;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f7fa;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            color: #67c23a;
+            font-weight: bold;
+        }
+        .error {
+            color: #f56c6c;
+            font-weight: bold;
+        }
+        .warning {
+            color: #e6a23c;
+            font-weight: bold;
+        }
+        button {
+            background: #409eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #66b1ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>智能招聘平台 - 路由测试</h1>
+        
+        <div class="test-section">
+            <h2>1. 检查 localStorage 状态</h2>
+            <button onclick="checkLocalStorage()">检查登录状态</button>
+            <div id="localStorageResult" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 模拟用户登录数据</h2>
+            <button onclick="simulateSeekerLogin()">模拟求职者登录</button>
+            <button onclick="simulateHRLogin()">模拟企业HR登录</button>
+            <button onclick="clearLogin()">清除登录数据</button>
+            <div id="simulateResult" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 测试路由跳转</h2>
+            <button onclick="testHomeRoute()">测试首页路由</button>
+            <button onclick="testProfileRoute()">测试简历管理路由</button>
+            <div id="routeTestResult" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. 检查组件文件</h2>
+            <button onclick="checkComponentFiles()">检查组件文件是否存在</button>
+            <div id="componentCheckResult" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        function checkLocalStorage() {
+            const token = localStorage.getItem('token');
+            const userInfo = localStorage.getItem('userInfo');
+            const resultDiv = document.getElementById('localStorageResult');
+            
+            let html = '<div>';
+            html += `<p><strong>Token:</strong> ${token ? '✅ 存在' : '❌ 不存在'}</p>`;
+            html += `<p><strong>用户信息:</strong> ${userInfo ? '✅ 存在' : '❌ 不存在'}</p>`;
+            
+            if (userInfo) {
+                try {
+                    const info = JSON.parse(userInfo);
+                    html += `<p><strong>用户ID:</strong> ${info.userId || '未设置'}</p>`;
+                    html += `<p><strong>手机号:</strong> ${info.phone || '未设置'}</p>`;
+                    html += `<p><strong>角色:</strong> ${info.role === 1 ? '求职者' : info.role === 2 ? '企业HR' : '未知'}</p>`;
+                } catch (e) {
+                    html += `<p class="error">用户信息解析失败: ${e.message}</p>`;
+                }
+            }
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+        
+        function simulateSeekerLogin() {
+            const userInfo = {
+                userId: 1001,
+                phone: '13800138001',
+                role: 1 // 求职者
+            };
+            
+            localStorage.setItem('token', 'test_token_123456');
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            
+            document.getElementById('simulateResult').innerHTML = 
+                '<p class="success">✅ 已模拟求职者登录</p>' +
+                '<p>用户ID: 1001, 手机号: 13800138001, 角色: 求职者</p>';
+        }
+        
+        function simulateHRLogin() {
+            const userInfo = {
+                userId: 2001,
+                phone: '13900139001',
+                role: 2 // 企业HR
+            };
+            
+            localStorage.setItem('token', 'test_token_654321');
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            
+            document.getElementById('simulateResult').innerHTML = 
+                '<p class="success">✅ 已模拟企业HR登录</p>' +
+                '<p>用户ID: 2001, 手机号: 13900139001, 角色: 企业HR</p>';
+        }
+        
+        function clearLogin() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo');
+            document.getElementById('simulateResult').innerHTML = 
+                '<p class="warning">⚠️ 已清除登录数据</p>';
+        }
+        
+        function testHomeRoute() {
+            const userInfo = localStorage.getItem('userInfo');
+            if (!userInfo) {
+                document.getElementById('routeTestResult').innerHTML = 
+                    '<p class="error">❌ 请先模拟登录</p>';
+                return;
+            }
+            
+            try {
+                const info = JSON.parse(userInfo);
+                if (info.role === 1 || info.role === 2) {
+                    document.getElementById('routeTestResult').innerHTML = 
+                        `<p class="success">✅ 可以访问首页 (角色: ${info.role === 1 ? '求职者' : '企业HR'})</p>`;
+                } else {
+                    document.getElementById('routeTestResult').innerHTML = 
+                        '<p class="error">❌ 角色信息无效</p>';
+                }
+            } catch (e) {
+                document.getElementById('routeTestResult').innerHTML = 
+                    `<p class="error">❌ 用户信息解析失败: ${e.message}</p>`;
+            }
+        }
+        
+        function testProfileRoute() {
+            const userInfo = localStorage.getItem('userInfo');
+            if (!userInfo) {
+                document.getElementById('routeTestResult').innerHTML = 
+                    '<p class="error">❌ 请先模拟登录</p>';
+                return;
+            }
+            
+            try {
+                const info = JSON.parse(userInfo);
+                if (info.role === 1) {
+                    document.getElementById('routeTestResult').innerHTML = 
+                        '<p class="success">✅ 求职者可以访问简历管理页面</p>';
+                } else if (info.role === 2) {
+                    document.getElementById('routeTestResult').innerHTML = 
+                        '<p class="success">✅ 企业HR可以访问企业管理页面</p>';
+                } else {
+                    document.getElementById('routeTestResult').innerHTML = 
+                        '<p class="error">❌ 角色信息无效</p>';
+                }
+            } catch (e) {
+                document.getElementById('routeTestResult').innerHTML = 
+                    `<p class="error">❌ 用户信息解析失败: ${e.message}</p>`;
+            }
+        }
+        
+        function checkComponentFiles() {
+            const components = [
+                'src/views/Home.vue',
+                'src/views/JobSeekerProfile.vue',
+                'src/views/CompanyProfile.vue',
+                'src/views/Login.vue',
+                'src/components/AppLayout.vue',
+                'src/router/index.ts',
+                'src/stores/userStore.ts'
+            ];
+            
+            let html = '<div>';
+            html += '<p>检查以下组件文件是否存在:</p>';
+            html += '<ul>';
+            
+            // 这里只是模拟检查，实际需要在浏览器控制台查看
+            components.forEach(comp => {
+                html += `<li>${comp} - <span class="success">✅ 假设存在</span></li>`;
+            });
+            
+            html += '</ul>';
+            html += '<p class="warning">⚠️ 注意：实际文件检查需要在浏览器控制台查看网络请求</p>';
+            html += '</div>';
+            
+            document.getElementById('componentCheckResult').innerHTML = html;
+        }
+        
+        // 页面加载时自动检查
+        window.onload = checkLocalStorage;
+    </script>
+</body>
+</html>

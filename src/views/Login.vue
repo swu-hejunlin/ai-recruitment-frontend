@@ -116,10 +116,10 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import { Iphone, Message, Switch, WarningFilled } from '@element-plus/icons-vue';
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { Iphone, Message, WarningFilled } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/userStore';
-import type { LoginForm as LoginFormType, Role, UserInfo } from '@/types';
+import type { LoginForm as LoginFormType, LoginResponse, Role, UserInfo } from '@/types';
 import { ROLE_MAP } from '@/types';
 import request from '@/utils/request';
 
@@ -210,7 +210,7 @@ const loginForm = reactive<LoginFormType>({
 /**
  * 手机号校验规则
  */
-const validatePhone = (rule: any, value: string, callback: any) => {
+const validatePhone = (_rule: any, value: string, callback: any) => {
   if (!value) {
     callback(new Error('请输入手机号'));
   } else if (!/^1[3-9]\d{9}$/.test(value)) {
@@ -223,7 +223,7 @@ const validatePhone = (rule: any, value: string, callback: any) => {
 /**
  * 验证码校验规则
  */
-const validateCode = (rule: any, value: string, callback: any) => {
+const validateCode = (_rule: any, value: string, callback: any) => {
   if (!value) {
     callback(new Error('请输入验证码'));
   } else if (!/^\d{6}$/.test(value)) {
@@ -353,11 +353,11 @@ const handleLogin = async () => {
     // 检查是否正在进行角色切换
     if (window.isSwitchingRole) {
       // 调用身份切换接口
-      const res = await request.post<any>('/api/user/switch-role', {
+      const res = await request.post('/api/user/switch-role', {
         phone: loginForm.phone,
         code: loginForm.code,
         role: loginForm.role
-      });
+      }) as unknown as LoginResponse;
 
       console.log('身份切换响应数据:', res);
 
@@ -371,9 +371,9 @@ const handleLogin = async () => {
         role: res.role
       };
 
-      userStore.token = res.token;
+      userStore.token = res.token || '';
       userStore.userInfo = userInfo;
-      localStorage.setItem('token', res.token);
+      localStorage.setItem('token', res.token || '');
       localStorage.setItem('userInfo', JSON.stringify(userInfo));
 
       ElMessage.success('身份切换成功');
@@ -386,11 +386,11 @@ const handleLogin = async () => {
     }
 
     // 正常登录流程
-    const res = await request.post<any>('/api/user/login', {
+    const res = await request.post('/api/user/login', {
       phone: loginForm.phone,
       code: loginForm.code,
       role: loginForm.role
-    });
+    }) as unknown as LoginResponse;
 
     console.log('登录响应数据:', res);
 
@@ -399,7 +399,7 @@ const handleLogin = async () => {
       console.log('检测到角色冲突，弹出对话框');
       // 角色冲突，弹出切换确认对话框
       loginResponseData.value = res;
-      currentRole.value = res.currentRole;
+      currentRole.value = res.currentRole as Role;
       showRoleSwitchDialog.value = true;
       return;
     }
@@ -412,9 +412,9 @@ const handleLogin = async () => {
       role: res.role
     };
 
-    userStore.token = res.token;
+    userStore.token = res.token || '';
     userStore.userInfo = userInfo;
-    localStorage.setItem('token', res.token);
+    localStorage.setItem('token', res.token || '');
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
 
     ElMessage.success('登录成功');

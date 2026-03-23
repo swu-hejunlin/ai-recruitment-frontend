@@ -5,18 +5,27 @@
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
-import type { RouteMeta as RouteMetaType } from '@/types';
 
 // ==================== 路由定义 ====================
 /**
  * 首页组件（占位，后续会替换）
  */
-const Home = () => import('@/views/Home.vue');
+import Home from '@/views/Home.vue';
 
 /**
  * 登录页面组件
  */
-const Login = () => import('@/views/Login.vue');
+import Login from '@/views/Login.vue';
+
+/**
+ * 求职者信息管理页面
+ */
+import JobSeekerProfile from '@/views/JobSeekerProfile.vue';
+
+/**
+ * 企业信息管理页面
+ */
+import CompanyProfile from '@/views/CompanyProfile.vue';
 
 /**
  * 公共路由（无需登录即可访问）
@@ -29,7 +38,7 @@ export const constantRoutes: RouteRecordRaw[] = [
     meta: {
       title: '登录',
       requiresAuth: false
-    } as RouteMetaType
+    }
   }
 ];
 
@@ -46,12 +55,28 @@ export const asyncRoutes: RouteRecordRaw[] = [
       title: '首页',
       requiresAuth: true,
       roles: [1, 2] // 求职者和企业HR都可访问
-    } as RouteMetaType
+    }
   },
-  // 后续会添加更多路由，如：
-  // - 求职者专属路由（简历管理、职位投递等）
-  // - 企业HR专属路由（岗位管理、简历筛选等）
-  // - AI功能路由（简历解析、智能匹配等）
+  {
+    path: '/profile',
+    name: 'JobSeekerProfile',
+    component: JobSeekerProfile,
+    meta: {
+      title: '我的简历',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
+    }
+  },
+  {
+    path: '/company',
+    name: 'CompanyProfile',
+    component: CompanyProfile,
+    meta: {
+      title: '企业管理',
+      requiresAuth: true,
+      roles: [2] // 仅企业HR
+    }
+  }
 ];
 
 // ==================== 创建路由实例 ====================
@@ -65,7 +90,7 @@ const router = createRouter({
  * 全局前置守卫
  * 用于权限控制和路由拦截
  */
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, _from) => {
   // 设置页面标题
   if (to.meta?.title) {
     document.title = `${to.meta.title} - 智能招聘平台`;
@@ -75,27 +100,49 @@ router.beforeEach((to, _from, next) => {
   const isLogin = userStore.isLogin;
 
   // 判断路由是否需要登录
-  const requiresAuth = (to.meta as RouteMetaType)?.requiresAuth !== false;
+  const requiresAuth = (to.meta as any)?.requiresAuth !== false;
 
   // 如果路由需要登录但用户未登录，跳转到登录页
   if (requiresAuth && !isLogin) {
-    next({
+    return {
       path: '/login',
       query: { redirect: to.fullPath } // 记录目标路由，登录后跳转
-    });
-    return;
+    };
   }
 
   // 如果用户已登录且访问登录页，跳转到首页
   if (isLogin && to.path === '/login') {
-    next('/');
-    return;
+    return '/';
   }
 
-  // TODO: 后续可添加角色权限校验
-  // 例如：企业HR不能访问求职者专属路由等
+  // 角色权限校验
+  if (requiresAuth && isLogin) {
+    const userRole = userStore.userInfo?.role;
+    const routeRoles = (to.meta as any)?.roles as number[] | undefined;
+    
+    // 如果路由有角色限制，检查用户角色
+    if (routeRoles && routeRoles.length > 0) {
+      if (!userRole || !routeRoles.includes(userRole)) {
+        console.warn(`路由权限不足: 用户角色 ${userRole} 无法访问 ${to.path}`);
+        
+        // 根据用户角色跳转到相应首页
+        if (userRole === 1) {
+          return '/';
+        } else if (userRole === 2) {
+          return '/';
+        } else {
+          // 角色未识别，跳转到登录页
+          return {
+            path: '/login',
+            query: { redirect: to.fullPath }
+          };
+        }
+      }
+    }
+  }
 
-  next();
+  // 正常通过
+  return true;
 });
 
 /**

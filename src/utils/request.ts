@@ -3,7 +3,7 @@
  * 提供统一的 HTTP 请求配置、拦截器和错误处理
  */
 
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
 import type { Result } from '@/types';
 
@@ -19,7 +19,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const REQUEST_TIMEOUT = 10000;
 
 // ==================== 创建 Axios 实例 ====================
-const request: AxiosInstance = axios.create({
+const request = axios.create({
   baseURL: BASE_URL,
   timeout: REQUEST_TIMEOUT,
   headers: {
@@ -27,9 +27,19 @@ const request: AxiosInstance = axios.create({
   }
 });
 
+// 扩展 request 方法的返回类型，使其返回拦截器处理后的类型
+interface RequestInstance extends AxiosInstance {
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+}
+
+const typedRequest = request as RequestInstance;
+
 // ==================== 请求拦截器 ====================
 request.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // 从 localStorage 获取 token
     const token = localStorage.getItem('token');
 
@@ -125,9 +135,9 @@ request.interceptors.response.use(
 );
 
 // ==================== 导出 ====================
-export default request;
+export default typedRequest;
 
 /**
  * 导出 Axios 原始类型，用于泛型约束
  */
-export type { AxiosRequestConfig, AxiosResponse, AxiosInstance };
+export type { AxiosRequestConfig, AxiosResponse, AxiosInstance, InternalAxiosRequestConfig };

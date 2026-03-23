@@ -68,8 +68,8 @@ export const useUserStore = defineStore('user', {
      */
     async login(loginData: LoginRequest): Promise<UserInfo> {
       try {
-        // 调用登录接口
-        const res = await request.post<any>('/api/user/login', loginData);
+        // 调用登录接口 - 响应拦截器已经返回data部分
+        const res = await request.post<any>('/api/user/login', loginData) as any;
 
         // 从响应中提取用户信息
         const userInfo: UserInfo = {
@@ -126,10 +126,5 @@ export const useUserStore = defineStore('user', {
   },
 
   // ==================== 持久化配置 ====================
-  persist: {
-    key: 'user-store', // localStorage 中的 key
-    storage: localStorage, // 使用 localStorage 存储
-    // 持久化所有状态
-    paths: ['token', 'userInfo']
-  }
+  persist: true
 });
