@@ -67,6 +67,25 @@
               <el-icon><House /></el-icon>
               <template #title>首页</template>
             </el-menu-item>
+            <el-menu-item index="/discover">
+              <el-icon><Position /></el-icon>
+              <template #title>职位</template>
+            </el-menu-item>
+            <el-menu-item index="/applications">
+              <el-icon><Document /></el-icon>
+              <template #title>
+                <span class="menu-item-with-badge">
+                  我的投递
+                  <el-badge
+                    v-if="unreadNotificationCount > 0"
+                    :value="unreadNotificationCount"
+                    :max="99"
+                    class="notification-badge"
+                    type="primary"
+                  />
+                </span>
+              </template>
+            </el-menu-item>
             <el-menu-item index="/profile">
               <el-icon><User /></el-icon>
               <template #title>我的简历</template>
@@ -82,6 +101,25 @@
             <el-menu-item index="/company">
               <el-icon><OfficeBuilding /></el-icon>
               <template #title>企业信息</template>
+            </el-menu-item>
+            <el-menu-item index="/boss/positions">
+              <el-icon><Position /></el-icon>
+              <template #title>职位管理</template>
+            </el-menu-item>
+            <el-menu-item index="/boss/applications">
+              <el-icon><Document /></el-icon>
+              <template #title>
+                <span class="menu-item-with-badge">
+                  投递管理
+                  <el-badge
+                    v-if="unreadNotificationCount > 0"
+                    :value="unreadNotificationCount"
+                    :max="99"
+                    class="notification-badge"
+                    type="danger"
+                  />
+                </span>
+              </template>
             </el-menu-item>
           </template>
           
@@ -123,10 +161,12 @@ import {
   House,
   OfficeBuilding,
   DArrowLeft,
-  DArrowRight
+  DArrowRight,
+  Position,
+  Document
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/userStore';
-import { getJobSeekerInfo, getCompanyInfo } from '@/utils/api';
+import { getJobSeekerInfo, getCompanyInfo, getUnreadNotificationCount } from '@/utils/api';
 import type { JobSeekerInfo, CompanyInfo } from '@/types';
 import { ROLE_MAP } from '@/types';
 import { storeToRefs } from 'pinia';
@@ -140,6 +180,8 @@ const { isLogin } = storeToRefs(userStore);
 const isSidebarCollapse = ref(false);
 const jobSeekerInfo = ref<JobSeekerInfo | null>(null);
 const companyInfo = ref<CompanyInfo | null>(null);
+const unreadNotificationCount = ref(0);
+let notificationTimer: number | null = null;
 
 // ==================== 计算属性 ====================
 /**
@@ -210,6 +252,47 @@ const handleCommand = async (command: string) => {
 };
 
 /**
+ * 获取未读通知数量
+ */
+const fetchUnreadNotificationCount = async () => {
+  if (!userStore.isLogin) return;
+  
+  try {
+    const response = await getUnreadNotificationCount();
+    unreadNotificationCount.value = response.count;
+  } catch (error) {
+    console.error('获取未读通知数量失败:', error);
+  }
+};
+
+/**
+ * 开始轮询未读通知数量
+ */
+const startNotificationPolling = () => {
+  if (notificationTimer) clearInterval(notificationTimer);
+  
+  // 首次立即获取
+  fetchUnreadNotificationCount();
+  
+  // 每30秒轮询一次
+  notificationTimer = setInterval(() => {
+    if (userStore.isLogin) {
+      fetchUnreadNotificationCount();
+    }
+  }, 30000);
+};
+
+/**
+ * 停止轮询未读通知数量
+ */
+const stopNotificationPolling = () => {
+  if (notificationTimer) {
+    clearInterval(notificationTimer);
+    notificationTimer = null;
+  }
+};
+
+/**
  * 获取用户信息
  */
 const fetchUserInfo = async () => {
@@ -231,7 +314,21 @@ const fetchUserInfo = async () => {
 // ==================== 生命周期 ====================
 onMounted(() => {
   fetchUserInfo();
+  startNotificationPolling();
 });
+
+// 监听登录状态变化
+watch(
+  () => userStore.isLogin,
+  (isLoggedIn) => {
+    if (isLoggedIn) {
+      startNotificationPolling();
+    } else {
+      stopNotificationPolling();
+      unreadNotificationCount.value = 0;
+    }
+  }
+);
 
 // 监听路由变化，重新获取用户信息
 watch(
@@ -242,15 +339,22 @@ watch(
     }
   }
 );
+
+// 组件卸载时清理定时器
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+  stopNotificationPolling();
+});
 </script>
 
 <style scoped>
-/* ==================== 布局容器 ==================== */
+/* ==================== BOSS直聘风格布局 ==================== */
 .app-layout {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f7fa;
+  background-color: var(--boss-bg-secondary);
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
 }
 
 /* ==================== 顶部导航栏 ==================== */
@@ -259,10 +363,11 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
   background-color: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  z-index: 100;
 }
 
 .header-left {
@@ -275,13 +380,26 @@ watch(
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  color: #409eff;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  background-color: rgba(0, 190, 170, 0.08);
+}
+
+.logo .el-icon {
+  font-size: 26px;
+  color: #00beaa;
 }
 
 .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: #222;
+  letter-spacing: 0.5px;
 }
 
 .header-right {
@@ -292,20 +410,27 @@ watch(
 .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background-color 0.3s;
+  padding: 8px 16px;
+  border-radius: var(--boss-radius-sm);
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background-color: var(--boss-bg-tertiary);
+  border-color: var(--boss-border);
 }
 
 .user-name {
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--boss-font-md);
+  font-weight: 500;
+  color: var(--boss-text-primary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ==================== 主体区域 ==================== */
@@ -313,16 +438,17 @@ watch(
   flex: 1;
   display: flex;
   overflow: hidden;
+  background-color: var(--boss-bg-secondary);
 }
 
 /* ==================== 侧边栏 ==================== */
 .app-sidebar {
-  width: 200px;
-  background-color: #fff;
-  border-right: 1px solid #e4e7ed;
+  width: 220px;
+  background-color: var(--boss-bg-primary);
+  border-right: 1px solid var(--boss-border-light);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .app-sidebar:has(.el-menu--collapse) {
@@ -332,38 +458,134 @@ watch(
 .sidebar-menu {
   border-right: none;
   flex: 1;
+  padding: 16px 0;
+  background-color: transparent;
 }
 
+/* Element-Plus菜单自定义样式 */
+:deep(.el-menu) {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+:deep(.el-menu-item) {
+  height: 48px !important;
+  line-height: 48px !important;
+  margin: 4px 12px !important;
+  border-radius: var(--boss-radius-md) !important;
+  color: var(--boss-text-secondary) !important;
+  font-size: var(--boss-font-md) !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+:deep(.el-menu-item.is-active) {
+  color: var(--boss-primary) !important;
+  background-color: rgba(0, 190, 170, 0.08) !important;
+  font-weight: 600 !important;
+}
+
+:deep(.el-menu-item:hover) {
+  color: var(--boss-text-primary) !important;
+  background-color: var(--boss-bg-tertiary) !important;
+}
+
+:deep(.el-menu-item .el-icon) {
+  font-size: 20px !important;
+  margin-right: 12px !important;
+  color: inherit !important;
+}
+
+:deep(.el-menu--collapse .el-menu-item .el-icon) {
+  margin-right: 0 !important;
+}
+
+/* 侧边栏折叠按钮 */
 .sidebar-collapse {
-  height: 50px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--boss-border-light);
   cursor: pointer;
-  color: #909399;
-  transition: background-color 0.3s;
+  color: var(--boss-icon-secondary);
+  background-color: var(--boss-bg-primary);
+  transition: all 0.3s ease;
 }
 
 .sidebar-collapse:hover {
-  background-color: #f5f7fa;
-  color: #409eff;
+  background-color: var(--boss-bg-tertiary);
+  color: var(--boss-primary);
+}
+
+.sidebar-collapse .el-icon {
+  font-size: 18px;
 }
 
 /* ==================== 菜单加载状态 ==================== */
 .loading-menu {
-  padding: 20px;
+  padding: 24px 16px;
 }
 
 .no-permission-menu {
-  padding: 40px 20px;
+  padding: 48px 24px;
   text-align: center;
+}
+
+:deep(.no-permission-menu .el-empty__description) {
+  font-size: var(--boss-font-sm);
+  color: var(--boss-text-tertiary) !important;
 }
 
 /* ==================== 主内容区 ==================== */
 .app-main {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 32px;
+  background-color: var(--boss-bg-secondary);
+}
+
+/* ==================== 菜单项带徽章样式 ==================== */
+.menu-item-with-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.notification-badge {
+  :deep(.el-badge__content) {
+    height: 18px;
+    line-height: 18px;
+    min-width: 18px;
+    padding: 0 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--el-color-danger);
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 108, 108, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(245, 108, 108, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 108, 108, 0);
+  }
+}
+
+/* 侧边栏折叠时的徽章样式 */
+:deep(.el-menu--collapse) .notification-badge {
+  :deep(.el-badge__content) {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    transform: scale(0.8);
+  }
 }
 </style>

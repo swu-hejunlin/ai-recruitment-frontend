@@ -80,7 +80,34 @@ request.interceptors.response.use(
       return data;
     }
 
-    // 业务失败，显示错误提示
+    // 处理业务错误码
+    if (code === 500 && message && (
+      message.includes('身份验证失败') || 
+      message.includes('token失效') || 
+      message.includes('Token过期') ||
+      message.includes('token过期') ||
+      message.includes('未登录') ||
+      message.includes('登录失效')
+    )) {
+      // 身份验证失效，清除用户状态并跳转到登录页
+      console.warn('身份验证失败，跳转到登录页面:', message);
+      
+      // 清除localStorage中的用户信息
+      localStorage.removeItem('token');
+      localStorage.removeItem('userInfo');
+      
+      // 显示身份验证失败提示
+      ElMessage.error(message || '身份验证已失效，请重新登录');
+      
+      // 使用location.href跳转，避免路由守卫的干扰
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+      
+      return Promise.reject(new Error(message || '身份验证失败'));
+    }
+
+    // 其他业务失败，显示错误提示
     ElMessage.error(message || '请求失败');
     return Promise.reject(new Error(message || '请求失败'));
   },
@@ -103,7 +130,11 @@ request.interceptors.response.use(
           // 清除 token 并跳转到登录页
           localStorage.removeItem('token');
           localStorage.removeItem('userInfo');
-          window.location.href = '/login';
+          // 显示错误提示
+          ElMessage.error(errorMessage);
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 100);
           break;
         case 403:
           errorMessage = '拒绝访问，权限不足';

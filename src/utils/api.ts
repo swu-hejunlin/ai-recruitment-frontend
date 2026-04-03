@@ -10,7 +10,36 @@ import type {
   CompanyInfo,
   UpdateCompanyRequest,
   FileUploadResponse,
-  FileType
+  FileType,
+  WorkExperience,
+  AddWorkExperienceRequest,
+  UpdateWorkExperienceRequest,
+  ProjectExperience,
+  AddProjectExperienceRequest,
+  UpdateProjectExperienceRequest,
+  EducationExperience,
+  AddEducationExperienceRequest,
+  UpdateEducationExperienceRequest,
+  PositionInfo,
+  PositionDetail,
+  AddPositionRequest,
+  UpdatePositionRequest,
+  QueryPositionRequest,
+  PaginatedResponse,
+  EducationLevel,
+  ApplicationInfo,
+  ApplicationDetail,
+  ApplyPositionRequest,
+  UpdateApplicationStatusRequest,
+  QueryBossApplicationRequest,
+  QuerySeekerApplicationRequest,
+  PositionFromApplication,
+  CompanyFromApplication,
+  JobSeekerFromApplication,
+  NotificationInfo,
+  UnreadNotificationCount,
+  QueryNotificationRequest,
+  MarkNotificationReadRequest
 } from '@/types';
 
 // ==================== 工具函数 ====================
@@ -53,6 +82,14 @@ export const uploadAvatar = (avatarUrl: string) => {
 };
 
 /**
+ * 查看头像
+ * 获取当前求职者的头像URL
+ */
+export const getAvatar = () => {
+  return toData<string | null>(request.get('/api/job-seeker/avatar'));
+};
+
+/**
  * 上传简历
  * @param resumeUrl - 简历URL（需先通过文件上传接口获取）
  */
@@ -65,6 +102,14 @@ export const uploadResume = (resumeUrl: string) => {
       'Content-Type': 'multipart/form-data'
     }
   }));
+};
+
+/**
+ * 查看简历
+ * 获取当前求职者的简历URL
+ */
+export const getResume = () => {
+  return toData<string | null>(request.get('/api/job-seeker/resume'));
 };
 
 // ==================== 企业 API ====================
@@ -157,4 +202,300 @@ export const uploadFilesBatch = (files: File[], fileType: FileType) => {
  */
 export const deleteFile = (fileUrl: string) => {
   return toData<null>(request.delete('/api/file/delete', { params: { fileUrl } }));
+};
+
+// ==================== 工作/实习经历 API ====================
+
+/**
+ * 获取工作/实习经历列表
+ */
+export const getWorkExperiences = () => {
+  return toData<WorkExperience[]>(request.get('/api/experience/list'));
+};
+
+/**
+ * 新增工作/实习经历
+ * @param data - 经历数据
+ */
+export const addWorkExperience = (data: AddWorkExperienceRequest) => {
+  return toData<null>(request.post('/api/experience/add', data));
+};
+
+/**
+ * 更新工作/实习经历
+ * @param data - 经历数据
+ */
+export const updateWorkExperience = (data: UpdateWorkExperienceRequest) => {
+  return toData<null>(request.put('/api/experience/update', data));
+};
+
+/**
+ * 删除工作/实习经历
+ * @param id - 经历ID
+ */
+export const deleteWorkExperience = (id: number) => {
+  return toData<null>(request.delete('/api/experience/delete', { params: { id } }));
+};
+
+// ==================== 项目经历 API ====================
+
+/**
+ * 获取项目经历列表
+ */
+export const getProjectExperiences = () => {
+  return toData<ProjectExperience[]>(request.get('/api/project/list'));
+};
+
+/**
+ * 新增项目经历
+ * @param data - 项目数据
+ */
+export const addProjectExperience = (data: AddProjectExperienceRequest) => {
+  return toData<null>(request.post('/api/project/add', data));
+};
+
+/**
+ * 更新项目经历
+ * @param data - 项目数据
+ */
+export const updateProjectExperience = (data: UpdateProjectExperienceRequest) => {
+  return toData<null>(request.put('/api/project/update', data));
+};
+
+/**
+ * 删除项目经历
+ * @param id - 项目ID
+ */
+export const deleteProjectExperience = (id: number) => {
+  return toData<null>(request.delete('/api/project/delete', { params: { id } }));
+};
+
+/**
+ * 获取教育经历列表
+ */
+export const getEducationExperiences = () => {
+  return toData<EducationExperience[]>(request.get('/api/education/list'));
+};
+
+/**
+ * 新增教育经历
+ * @param data - 教育经历数据
+ */
+export const addEducationExperience = (data: AddEducationExperienceRequest) => {
+  return toData<null>(request.post('/api/education/add', data));
+};
+
+/**
+ * 更新教育经历
+ * @param data - 教育经历数据
+ */
+export const updateEducationExperience = (data: UpdateEducationExperienceRequest) => {
+  return toData<null>(request.put('/api/education/update', data));
+};
+
+/**
+ * 删除教育经历
+ * @param id - 教育经历ID
+ */
+export const deleteEducationExperience = (id: number) => {
+  return toData<null>(request.delete('/api/education/delete', { params: { id } }));
+};
+
+// ==================== 职位模块 API ====================
+
+/**
+ * Boss查询自己发布的职位列表
+ * @param pageNum - 页码，默认1
+ * @param pageSize - 每页数量，默认10
+ */
+export const getBossPositionList = (pageNum?: number, pageSize?: number) => {
+  return toData<PaginatedResponse<PositionInfo>>(
+    request.get('/api/position/boss/list', { params: { pageNum, pageSize } })
+  );
+};
+
+/**
+ * 求职者查询职位列表
+ * @param params - 查询参数
+ */
+export const getPositionList = (params?: QueryPositionRequest) => {
+  return toData<PaginatedResponse<PositionInfo>>(
+    request.get('/api/position/list', { params })
+  );
+};
+
+/**
+ * 查询职位详情
+ * @param id - 职位ID
+ */
+export const getPositionDetail = (id: number) => {
+  return toData<PositionDetail>(request.get('/api/position/detail', { params: { id } }));
+};
+
+/**
+ * 根据公司查询职位
+ * @param companyId - 公司ID
+ */
+export const getPositionsByCompany = (companyId: number) => {
+  return toData<PositionInfo[]>(request.get('/api/position/company', { params: { companyId } }));
+};
+
+/**
+ * 发布新职位
+ * @param data - 职位数据
+ */
+export const addPosition = (data: AddPositionRequest) => {
+  return toData<null>(request.post('/api/position/add', data));
+};
+
+/**
+ * 更新职位信息
+ * @param data - 职位数据
+ */
+export const updatePosition = (data: UpdatePositionRequest) => {
+  return toData<null>(request.put('/api/position/update', data));
+};
+
+/**
+ * 删除职位
+ * @param id - 职位ID
+ */
+export const deletePosition = (id: number) => {
+  return toData<null>(request.delete('/api/position/delete', { params: { id } }));
+};
+
+/**
+ * 关闭职位（停止招聘）
+ * @param id - 职位ID
+ */
+export const closePosition = (id: number) => {
+  return toData<null>(request.put('/api/position/close', null, { params: { id } }));
+};
+
+/**
+ * 开启职位（重新开始招聘）
+ * @param id - 职位ID
+ */
+export const openPosition = (id: number) => {
+  return toData<null>(request.put('/api/position/open', null, { params: { id } }));
+};
+
+// ==================== 投递 API ====================
+
+/**
+ * 投递简历
+ * @param data - 投递请求数据
+ */
+export const applyPosition = (data: ApplyPositionRequest) => {
+  // 创建URLSearchParams对象来处理form-data
+  const formData = new URLSearchParams();
+  formData.append('positionId', data.positionId.toString());
+  
+  return toData<null>(request.post('/api/application/apply', formData, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }));
+};
+
+/**
+ * Boss查询收到的投递列表
+ * @param params - 查询参数
+ */
+export const getBossApplications = (params?: QueryBossApplicationRequest) => {
+  return toData<PaginatedResponse<ApplicationInfo>>(
+    request.get('/api/application/boss/list', { params })
+  );
+};
+
+/**
+ * 求职者查询投递列表
+ * @param params - 查询参数
+ */
+export const getSeekerApplications = (params?: QuerySeekerApplicationRequest) => {
+  return toData<PaginatedResponse<ApplicationInfo>>(
+    request.get('/api/application/seeker/list', { params })
+  );
+};
+
+/**
+ * 查看投递详情
+ * @param id - 投递记录ID
+ */
+export const getApplicationDetail = (id: number) => {
+  return toData<ApplicationDetail>(request.get('/api/application/detail', { params: { id } }));
+};
+
+/**
+ * 根据投递记录查看职位信息
+ * @param id - 投递记录ID
+ */
+export const getPositionFromApplication = (id: number) => {
+  return toData<PositionFromApplication>(request.get('/api/application/position', { params: { id } }));
+};
+
+/**
+ * 根据投递记录查看公司信息
+ * @param id - 投递记录ID
+ */
+export const getCompanyFromApplication = (id: number) => {
+  return toData<CompanyFromApplication>(request.get('/api/application/company', { params: { id } }));
+};
+
+/**
+ * BOSS查看求职者信息（简历）
+ * @param id - 投递记录ID
+ */
+export const getJobSeekerFromApplication = (id: number) => {
+  return toData<JobSeekerFromApplication>(request.get('/api/application/job-seeker', { params: { id } }));
+};
+
+/**
+ * 标记简历为已查看
+ * @param id - 投递记录ID
+ */
+export const markApplicationAsRead = (id: number) => {
+  return toData<null>(request.put('/api/application/read', null, { params: { id } }));
+};
+
+/**
+ * 更新投递状态
+ * @param params - 更新参数（id和status）
+ */
+export const updateApplicationStatus = (params: UpdateApplicationStatusRequest) => {
+  return toData<null>(request.put('/api/application/status', null, { params }));
+};
+
+// ==================== 通知 API ====================
+
+/**
+ * 获取通知列表
+ * @param params - 查询参数
+ */
+export const getNotifications = (params?: QueryNotificationRequest) => {
+  return toData<PaginatedResponse<NotificationInfo>>(
+    request.get('/api/notification/list', { params })
+  );
+};
+
+/**
+ * 获取未读通知数量
+ */
+export const getUnreadNotificationCount = () => {
+  return toData<UnreadNotificationCount>(request.get('/api/notification/unread-count'));
+};
+
+/**
+ * 标记通知为已读
+ * @param params - 通知ID
+ */
+export const markNotificationRead = (params: MarkNotificationReadRequest) => {
+  return toData<null>(request.put('/api/notification/read', null, { params }));
+};
+
+/**
+ * 标记所有通知为已读
+ */
+export const markAllNotificationsRead = () => {
+  return toData<null>(request.put('/api/notification/read-all'));
 };

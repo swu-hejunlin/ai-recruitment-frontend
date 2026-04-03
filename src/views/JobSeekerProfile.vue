@@ -9,26 +9,46 @@
       <!-- 页面标题和操作按钮 -->
       <div class="page-header">
         <div class="header-left">
-          <h2>个人信息管理</h2>
+          <div class="title-wrapper">
+            <h2>
+              <el-icon :size="24" color="#00beaa"><UserFilled /></el-icon>
+              个人信息管理
+            </h2>
+            <div class="title-badge">
+              <el-tag type="success" size="small" v-if="!isFirstTime">已完善</el-tag>
+              <el-tag type="warning" size="small" v-else>待完善</el-tag>
+            </div>
+          </div>
           <p>完善您的个人资料，让更多企业看到优秀的您</p>
         </div>
         <div class="header-right">
           <!-- 预览模式：显示编辑按钮 -->
-          <el-button v-if="!isEditing" type="primary" @click="enterEditMode">
+          <el-button 
+            v-if="!isEditing" 
+            type="primary" 
+            size="large" 
+            @click="enterEditMode"
+            class="edit-btn"
+          >
             <el-icon><Edit /></el-icon>
             编辑信息
           </el-button>
           <!-- 编辑模式：显示操作按钮组 -->
           <div v-else class="edit-actions">
-            <el-button type="danger" text @click="exitEditMode">
+            <el-button type="danger" @click="exitEditMode" class="action-btn">
               <el-icon><Close /></el-icon>
               取消编辑
             </el-button>
-            <el-button type="warning" @click="handleReset">
+            <el-button type="warning" @click="handleReset" class="action-btn">
               <el-icon><RefreshRight /></el-icon>
               重置信息
             </el-button>
-            <el-button type="primary" :loading="saving" @click="handleSave">
+            <el-button 
+              type="primary" 
+              :loading="saving" 
+              @click="handleSave"
+              class="action-btn"
+            >
               <el-icon><Select /></el-icon>
               保存修改
             </el-button>
@@ -44,23 +64,31 @@
       <!-- 内容区域 -->
       <div v-else class="profile-content">
         <!-- 首次填写提示 -->
-        <el-alert
-          v-if="isFirstTime"
-          title="首次填写"
-          type="info"
-          description="您正在首次填写求职信息，请完善以下信息后提交"
-          show-icon
-          :closable="false"
-          style="margin-bottom: 20px"
-        />
+          <el-alert
+            v-if="isFirstTime"
+            title="首次填写"
+            type="info"
+            description="您正在首次填写求职信息，请完善以下信息后提交"
+            show-icon
+            :closable="false"
+            style="margin-bottom: 20px"
+          />
         <!-- 左侧：基本信息卡片 -->
         <div class="profile-left">
           <!-- 头像卡片 -->
-          <el-card class="avatar-card">
+          <el-card class="profile-card avatar-card">
             <div class="avatar-wrapper">
-              <el-avatar :size="100" :src="formData.avatar">
-                <el-icon :size="40"><User /></el-icon>
-              </el-avatar>
+              <!-- 点击头像预览大图 -->
+              <div 
+                class="avatar-preview-wrapper" 
+                @click="previewAvatar"
+                style="cursor: pointer"
+                title="点击预览头像"
+              >
+                <el-avatar :size="100" :src="formData.avatar">
+                  <el-icon :size="40"><User /></el-icon>
+                </el-avatar>
+              </div>
               <div class="avatar-upload">
                 <el-button 
                   type="primary" 
@@ -88,15 +116,29 @@
           </el-card>
 
           <!-- 简历附件卡片 -->
-          <el-card class="resume-card">
+          <el-card class="profile-card resume-card">
             <template #header>
               <div class="card-header">
+                <el-icon><Document /></el-icon>
                 <span>简历附件</span>
+                <el-tag v-if="formData.resumeUrl" type="success" size="small" class="resume-tag">
+                  <el-icon :size="12"><CircleCheckFilled /></el-icon>
+                  已上传
+                </el-tag>
+                <el-tag v-else type="warning" size="small" class="resume-tag">
+                  <el-icon :size="12"><WarningFilled /></el-icon>
+                  未上传
+                </el-tag>
               </div>
             </template>
             <div v-if="formData.resumeUrl" class="resume-info">
-              <el-icon :size="24" color="#67c23a"><Document /></el-icon>
-              <span class="resume-name">已上传简历</span>
+              <div class="resume-view" @click="openResumePreview" style="cursor: pointer; display: flex; align-items: center; gap: 8px;" title="点击在线查看简历">
+                <el-icon :size="24" color="#67c23a"><Document /></el-icon>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                  <span class="resume-name" style="color: #409eff; text-decoration: underline;">已上传简历</span>
+                  <span style="font-size: 12px; color: #909399;">{{ getResumeFileType(formData.resumeUrl) }}</span>
+                </div>
+              </div>
               <el-button 
                 type="danger" 
                 size="small" 
@@ -128,7 +170,7 @@
 
         <!-- 右侧：详细信息表单 -->
         <div class="profile-right">
-          <el-card>
+          <el-card class="profile-form-container">
             <el-form ref="formRef" :model="formData" :rules="formRules" label-width="120px" class="profile-form" :disabled="!isEditing">
               <!-- 基本信息 -->
               <div class="form-section">
@@ -163,6 +205,16 @@
                 </el-row>
                 <el-row :gutter="20">
                   <el-col :span="12">
+                    <el-form-item label="电话" prop="phone">
+                      <el-input v-model="formData.phone" placeholder="请输入联系电话" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <!-- 预留位置，保持布局平衡 -->
+                  </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                  <el-col :span="12">
                     <el-form-item label="所在城市" prop="city">
                       <el-input v-model="formData.city" placeholder="请输入城市" />
                     </el-form-item>
@@ -175,35 +227,7 @@
                 </el-row>
               </div>
 
-              <!-- 教育背景 -->
-              <div class="form-section">
-                <h4 class="section-title">教育背景</h4>
-                <el-row :gutter="20">
-                  <el-col :span="12">
-                    <el-form-item label="学历" prop="educationLevel">
-                      <el-select v-model="formData.educationLevel" placeholder="请选择学历" style="width: 100%">
-                        <el-option :value="1" label="高中及以下" />
-                        <el-option :value="2" label="大专" />
-                        <el-option :value="3" label="本科" />
-                        <el-option :value="4" label="硕士" />
-                        <el-option :value="5" label="博士" />
-                      </el-select>
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
-                    <el-form-item label="毕业院校" prop="graduateSchool">
-                      <el-input v-model="formData.graduateSchool" placeholder="请输入毕业院校" />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-                <el-row :gutter="20">
-                  <el-col :span="12">
-                    <el-form-item label="专业" prop="major">
-                      <el-input v-model="formData.major" placeholder="请输入专业" />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-              </div>
+              
 
               <!-- 工作信息 -->
               <div class="form-section">
@@ -289,26 +313,110 @@
               </div>
             </el-form>
           </el-card>
+
+          <!-- 工作/实习经历 -->
+          <el-card class="experience-container section-margin">
+            <div class="experience-content-wrapper">
+              <WorkExperienceManager :is-editing="false" :hide-header="true" />
+            </div>
+          </el-card>
+
+          <!-- 教育经历 -->
+          <el-card class="experience-container section-margin">
+            <div class="experience-content-wrapper">
+              <EducationManager :is-editing="false" :hide-header="true" />
+            </div>
+          </el-card>
+
+          <!-- 项目经历 -->
+          <el-card class="experience-container section-margin">
+            <div class="experience-content-wrapper">
+              <ProjectExperienceManager :is-editing="false" :hide-header="true" />
+            </div>
+          </el-card>
         </div>
       </div>
     </div>
+
+    <!-- 头像预览组件 -->
+    <ElImageViewer
+      v-if="avatarPreviewVisible"
+      :url-list="formData.avatar ? [formData.avatar] : []"
+      @close="avatarPreviewVisible = false"
+    />
+
+    <!-- 简历预览对话框 -->
+    <el-dialog
+      v-model="resumePreviewVisible"
+      :title="resumePreviewTitle"
+      width="90%"
+      top="5vh"
+      :before-close="handlePreviewClose"
+    >
+      <div class="preview-container" v-if="resumePreviewUrl">
+        <!-- PDF预览 -->
+        <iframe
+          v-if="currentPreviewType === 'pdf'"
+          :src="resumePreviewUrl"
+          class="preview-iframe"
+          frameborder="0"
+          title="简历预览"
+        ></iframe>
+        
+        <!-- Office文档预览 -->
+        <iframe
+          v-else-if="currentPreviewType === 'office'"
+          :src="resumePreviewUrl"
+          class="preview-iframe"
+          frameborder="0"
+          title="Office文档预览"
+        ></iframe>
+        
+        <!-- 其他格式提示 -->
+        <div v-else class="unsupported-format">
+          <el-icon :size="48" color="#909399"><Warning /></el-icon>
+          <h3>不支持在线预览</h3>
+          <p>该文件格式({{ currentPreviewExtension.toUpperCase() }})不支持在线预览</p>
+          <el-button type="primary" @click="downloadResumeDirectly">直接下载</el-button>
+        </div>
+      </div>
+      
+      <!-- 加载状态 -->
+      <div v-else class="loading-preview">
+        <el-icon class="is-loading" :size="48"><Loading /></el-icon>
+        <p>正在加载预览...</p>
+      </div>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="resumePreviewVisible = false">关闭</el-button>
+          <el-button type="primary" @click="downloadResume" :loading="downloading">
+            下载简历
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
-import { User, Upload, Document, Plus, RefreshRight, Select, Edit, Close } from '@element-plus/icons-vue';
+import { ElMessage, ElImageViewer, ElDialog, type FormInstance, type FormRules } from 'element-plus';
+import { User, Upload, Document, Plus, RefreshRight, Select, Edit, Close, Warning, Loading, UserFilled, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/userStore';
 import AppLayout from '@/components/AppLayout.vue';
+import WorkExperienceManager from '@/components/work-experience/WorkExperienceManager.vue';
+import ProjectExperienceManager from '@/components/project-experience/ProjectExperienceManager.vue';
+import EducationManager from '@/components/education-experience/EducationManager.vue';
 import {
   getJobSeekerInfo,
   updateJobSeekerInfo,
   uploadAvatar,
   uploadResume,
-  uploadFile
+  uploadFile,
+  getResume,
+  getAvatar
 } from '@/utils/api';
-import type { UpdateJobSeekerRequest } from '@/types';
 import { GENDER_MAP } from '@/types';
 
 // ==================== 表单数据 ====================
@@ -317,16 +425,17 @@ const saving = ref(false);
 const isEditing = ref(false); // 编辑模式状态
 const formRef = ref<FormInstance>();
 
+// 用户状态
+const userStore = useUserStore();
+
 // 表单数据
 const formData = reactive({
   id: 0,
   name: '',
+  phone: '', // 新增电话字段
   gender: undefined as number | undefined,
   email: '',
   age: undefined as number | undefined,
-  educationLevel: undefined as number | undefined,
-  graduateSchool: '',
-  major: '',
   workYears: undefined as number | undefined,
   currentSalary: undefined as number | undefined,
   expectedSalary: undefined as number | undefined,
@@ -339,9 +448,26 @@ const formData = reactive({
   resumeUrl: ''
 });
 
+// ==================== 简历预览相关 ====================
+const resumePreviewVisible = ref(false);
+const resumePreviewUrl = ref('');
+const resumePreviewTitle = ref('');
+const currentPreviewExtension = ref('');
+const currentPreviewType = ref(''); // 'pdf', 'office', 'other'
+const downloading = ref(false);
+
+// 判断是否是Office文档
+const isOfficeDocument = (extension: string): boolean => {
+  const officeExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+  return officeExtensions.includes(extension.toLowerCase());
+};
+
 // ==================== 表单校验规则 ====================
 const formRules: FormRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码格式', trigger: 'blur' }
+  ],
   email: [
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ]
@@ -353,9 +479,7 @@ const skillInputVisible = ref(false);
 const skillInputValue = ref('');
 const skillInputRef = ref<HTMLInputElement>();
 
-/**
- * 添加技能标签
- */
+// 添加技能标签
 const showSkillInput = () => {
   skillInputVisible.value = true;
   nextTick(() => {
@@ -363,9 +487,7 @@ const showSkillInput = () => {
   });
 };
 
-/**
- * 确认添加技能
- */
+// 确认添加技能
 const handleSkillInputConfirm = () => {
   if (skillInputValue.value) {
     skillList.value.push(skillInputValue.value);
@@ -376,9 +498,7 @@ const handleSkillInputConfirm = () => {
   formData.skills = JSON.stringify(skillList.value);
 };
 
-/**
- * 删除技能标签
- */
+// 删除技能标签
 const removeSkill = (index: number) => {
   skillList.value.splice(index, 1);
   formData.skills = JSON.stringify(skillList.value);
@@ -387,16 +507,12 @@ const removeSkill = (index: number) => {
 // ==================== 头像上传相关 ====================
 const avatarInputRef = ref<HTMLInputElement>();
 
-/**
- * 触发头像上传
- */
+// 触发头像上传
 const triggerAvatarUpload = () => {
   avatarInputRef.value?.click();
 };
 
-/**
- * 处理头像选择
- */
+// 处理头像选择
 const handleAvatarChange = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
@@ -434,19 +550,45 @@ const handleAvatarChange = async (event: Event) => {
   target.value = '';
 };
 
+// ==================== 头像预览功能 ====================
+const avatarPreviewVisible = ref(false);
+
+// 预览头像
+const previewAvatar = async () => {
+  try {
+    // 先检查当前是否有头像URL，如果有则直接使用
+    if (formData.avatar) {
+      avatarPreviewVisible.value = true;
+      return;
+    }
+    
+    // 如果没有，则调用 API 获取头像 URL
+    const avatarUrl = await getAvatar();
+    
+    if (!avatarUrl) {
+      ElMessage.warning('您还没有上传头像');
+      return;
+    }
+    
+    // 更新表单数据和显示预览
+    formData.avatar = avatarUrl;
+    avatarPreviewVisible.value = true;
+    
+  } catch (error) {
+    console.error('获取头像URL失败:', error);
+    ElMessage.error('获取头像失败，请重试');
+  }
+};
+
 // ==================== 简历上传相关 ====================
 const resumeInputRef = ref<HTMLInputElement>();
 
-/**
- * 触发简历上传
- */
+// 触发简历上传
 const triggerResumeUpload = () => {
   resumeInputRef.value?.click();
 };
 
-/**
- * 处理简历选择
- */
+// 处理简历选择
 const handleResumeChange = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
@@ -495,116 +637,337 @@ const handleResumeChange = async (event: Event) => {
   target.value = '';
 };
 
-/**
- * 删除简历
- */
+// 删除简历
 const handleRemoveResume = () => {
   formData.resumeUrl = '';
   // TODO: 如果后端支持删除简历，可以调用删除接口
 };
 
+// 获取文件扩展名
+const getFileExtension = (url: string): string => {
+  try {
+    console.log('正在解析URL:', url);
+    
+    // 检测阿里云OSS的Content-Type参数（支持多种写法）
+    // 匹配：response-content-type、response_content_type、RESPONSE-CONTENT-TYPE等
+    const contentTypePatterns = [
+      /response-content-type=([^&]*)/i,
+      /response_content_type=([^&]*)/i,
+      /content-type=([^&]*)/i,
+      /content_type=([^&]*)/i
+    ];
+    
+    for (const pattern of contentTypePatterns) {
+      const contentTypeMatch = url.match(pattern);
+      if (contentTypeMatch) {
+        const contentType = decodeURIComponent(contentTypeMatch[1]).toLowerCase();
+        console.log('从Content-Type参数检测到:', contentType);
+        
+        // 根据Content-Type返回扩展名
+        if (contentType.includes('pdf')) return 'pdf';
+        if (contentType.includes('msword') || contentType.includes('wordprocessingml')) return 'docx';
+        if (contentType.includes('document') && !contentType.includes('wordprocessingml')) return 'doc';
+        if (contentType.includes('excel') || contentType.includes('spreadsheetml')) return 'xlsx';
+        if (contentType.includes('presentation') || contentType.includes('presentationml')) return 'pptx';
+        if (contentType.includes('powerpoint')) return 'ppt';
+        if (contentType.includes('image/jpeg') || contentType.includes('image/jpg')) return 'jpg';
+        if (contentType.includes('image/png')) return 'png';
+        if (contentType.includes('image/gif')) return 'gif';
+        if (contentType.includes('image/webp')) return 'webp';
+      }
+    }
+    
+    // 尝试解析URL
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    
+    // 获取文件名（最后一个斜杠后面的部分）
+    const fileName = pathname.split('/').pop() || '';
+    console.log('从路径提取的文件名:', fileName);
+    
+    // 移除查询参数部分（如果有）
+    const fileNameWithoutQuery = fileName.split('?')[0];
+    
+    // 找到最后一个点号位置
+    const dotIndex = fileNameWithoutQuery.lastIndexOf('.');
+    if (dotIndex === -1) {
+      console.log('没有找到扩展名');
+      return ''; // 没有扩展名
+    }
+    
+    // 获取扩展名
+    const extension = fileNameWithoutQuery.substring(dotIndex + 1).toLowerCase();
+    console.log('提取的原始扩展名:', extension);
+    
+    // 只保留字母和数字（移除任何特殊字符）
+    const cleanExtension = extension.replace(/[^a-z0-9]/g, '');
+    console.log('清理后的扩展名:', cleanExtension);
+    
+    return cleanExtension;
+    
+  } catch (error) {
+    console.warn('无法解析URL:', url, error);
+    
+    // 如果URL解析失败，尝试简单方法
+    // 移除查询参数
+    const urlWithoutQuery = url.split('?')[0];
+    
+    // 获取文件名
+    const fileName = urlWithoutQuery.split('/').pop() || '';
+    
+    // 找到扩展名
+    const dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex === -1) {
+      return '';
+    }
+    
+    const extension = fileName.substring(dotIndex + 1).toLowerCase();
+    const cleanExtension = extension.replace(/[^a-z0-9]/g, '');
+    
+    return cleanExtension;
+  }
+};
+
+// 获取简历文件类型显示文本
+const getResumeFileType = (url: string): string => {
+  const extension = getFileExtension(url);
+  
+  const fileTypeMap: Record<string, string> = {
+    pdf: 'PDF文档 (支持在线预览)',
+    doc: 'Word文档 (支持在线查看)',
+    docx: 'Word文档 (支持在线查看)',
+    ppt: 'PowerPoint演示文稿',
+    pptx: 'PowerPoint演示文稿',
+    xls: 'Excel表格',
+    xlsx: 'Excel表格',
+    // 其他类型
+    jpg: '图片文件',
+    jpeg: '图片文件',
+    png: '图片文件',
+    gif: '图片文件',
+    txt: '文本文件',
+    zip: '压缩文件',
+    rar: '压缩文件'
+  };
+  
+  if (!extension) return '未知格式';
+  
+  const typeName = fileTypeMap[extension.toLowerCase()];
+  return typeName ? `${extension.toUpperCase()} - ${typeName}` : `${extension.toUpperCase()} 格式`;
+};
+
+// 打开简历预览对话框
+const openResumePreview = async () => {
+  try {
+    // 显示加载状态
+    resumePreviewUrl.value = '';
+    resumePreviewVisible.value = true;
+    resumePreviewTitle.value = '正在获取简历...';
+    
+    // 调用 API 获取简历 URL
+    const resumeUrl = await getResume();
+    
+    if (!resumeUrl) {
+      ElMessage.warning('您还没有上传简历');
+      resumePreviewVisible.value = false;
+      return;
+    }
+    
+    const extension = getFileExtension(resumeUrl);
+    
+    if (!extension) {
+      // 无法识别文件类型，直接下载
+      window.open(resumeUrl, '_blank');
+      ElMessage.warning('无法识别文件类型，已直接打开');
+      resumePreviewVisible.value = false;
+      return;
+    }
+    
+    // 设置预览相关状态
+    resumePreviewUrl.value = resumeUrl;
+    currentPreviewExtension.value = extension;
+    
+    // 记录调试信息
+    console.log('解析到的扩展名:', extension);
+    console.log('原始简历URL:', resumeUrl);
+    
+    // 检测任何Content-Type参数
+    const contentTypePatterns = [
+      /response-content-type=([^&]*)/i,
+      /response_content_type=([^&]*)/i,
+      /content-type=([^&]*)/i,
+      /content_type=([^&]*)/i
+    ];
+    
+    let detectedContentType = '';
+    for (const pattern of contentTypePatterns) {
+      const match = resumeUrl.match(pattern);
+      if (match) {
+        detectedContentType = decodeURIComponent(match[1]).toLowerCase();
+        console.log('检测到Content-Type:', detectedContentType);
+        break;
+      }
+    }
+    
+    // 判断预览类型和构建最终预览URL
+    let previewType = 'other';
+    let finalPreviewUrl = resumeUrl; // 最终用于iframe预览的URL
+    
+    // 检查是否是PDF文件
+    const isPDF = extension === 'pdf' || detectedContentType.includes('pdf');
+    
+    if (isPDF) {
+      previewType = 'pdf';
+      resumePreviewTitle.value = '简历预览 - PDF文档';
+      
+      // 对于PDF文件，确保URL正确，移除不必要的参数
+      // 只需要保留签名、过期时间和AccessKeyId这些必要参数
+      // response-content-disposition=inline是必要的
+      
+      // 清理URL：移除可能导致400错误的response-content-type参数
+      if (resumeUrl.includes('&response-content-type=')) {
+        console.log('清理response-content-type参数以避免400错误');
+        finalPreviewUrl = resumeUrl.replace(/&response-content-type=[^&]*/i, '');
+      } else if (resumeUrl.includes('?response-content-type=')) {
+        // 如果不是以&开头，而是以?开头的第一个参数
+        console.log('清理response-content-type参数以避免400错误（首个参数）');
+        finalPreviewUrl = resumeUrl.replace(/\?response-content-type=[^&]*(&|$)/i, (_match, p1) => {
+          return p1 === '&' ? '?' : '';
+        });
+      }
+      
+    } else if (isOfficeDocument(extension)) {
+      previewType = 'office';
+      resumePreviewTitle.value = `简历预览 - ${extension.toUpperCase()}文档`;
+      
+      // 对于Office文档，使用Microsoft Office Web Viewer
+      // 但需要使用原始的完整URL（包括签名）
+      // Office Web Viewer可以处理带签名的URL
+      finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+      
+    } else if (detectedContentType) {
+      // 根据Content-Type判断
+      if (detectedContentType.includes('msword') || detectedContentType.includes('wordprocessingml')) {
+        previewType = 'office';
+        resumePreviewTitle.value = '简历预览 - Word文档';
+        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+      } else if (detectedContentType.includes('excel') || detectedContentType.includes('spreadsheetml')) {
+        previewType = 'office';
+        resumePreviewTitle.value = '简历预览 - Excel文档';
+        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+      } else if (detectedContentType.includes('presentation') || detectedContentType.includes('presentationml')) {
+        previewType = 'office';
+        resumePreviewTitle.value = '简历预览 - PowerPoint文档';
+        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+      } else if (detectedContentType.includes('powerpoint')) {
+        previewType = 'office';
+        resumePreviewTitle.value = '简历预览 - PowerPoint文档';
+        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
+      } else {
+        // 显示Content-Type信息
+        resumePreviewTitle.value = `简历预览 - ${detectedContentType.split('/').pop() || '文档'}`;
+      }
+    } else {
+      // 无法识别任何类型，但通过文件扩展名判断
+      if (extension === 'pdf') {
+        previewType = 'pdf';
+        resumePreviewTitle.value = '简历预览 - PDF文档';
+      } else {
+        resumePreviewTitle.value = `简历预览 - ${extension || '未知格式'}`;
+      }
+    }
+    
+    currentPreviewType.value = previewType;
+    // 使用最终处理后的URL
+    resumePreviewUrl.value = finalPreviewUrl;
+    
+  } catch (error) {
+    console.error('获取简历URL失败:', error);
+    ElMessage.error('获取简历失败，请重试');
+    resumePreviewVisible.value = false;
+  }
+};
+
 // ==================== 获取和保存数据 ====================
 
-/**
- * 获取求职者信息
- */
+// 获取求职者信息
 const fetchData = async () => {
   try {
     loading.value = true;
     
-    // 检查用户是否已登录且是求职者角色
-    const userStore = useUserStore();
+    console.log('用户存储状态:', {
+      isLogin: userStore.isLogin,
+      userInfo: userStore.userInfo,
+      role: userStore.userInfo?.role
+    });
+    
     if (!userStore.isLogin || userStore.userInfo?.role !== 1) {
       console.warn('用户未登录或不是求职者角色');
       loading.value = false;
       return;
     }
     
-    const res = await getJobSeekerInfo();
+    console.log('开始获取求职者信息...');
+    const res: any = await getJobSeekerInfo();
+    console.log('获取到的求职者信息:', res);
 
+    // 根据API响应结构，res可能是完整的响应对象
+    // 处理不同的响应结构
+    let jobSeekerData: any;
+    let educationsData: any[] = [];
+    let experiencesData: any[] = [];
+    let projectsData: any[] = [];
+    
+    if (res.jobSeeker) {
+      // 新结构：{ jobSeeker, educations, experiences, projects }
+      jobSeekerData = res.jobSeeker;
+      educationsData = res.educations || [];
+      experiencesData = res.experiences || [];
+      projectsData = res.projects || [];
+    } else {
+      // 旧结构：直接是求职者信息
+      jobSeekerData = res;
+      // 记录这是旧结构
+      console.log('使用旧API结构（直接返回求职者信息）');
+    }
+    
     // 填充表单数据
-    Object.assign(formData, res);
-
+    Object.assign(formData, jobSeekerData);
+    
     // 解析技能标签
-    if (res.skills) {
+    if (formData.skills) {
       try {
-        skillList.value = JSON.parse(res.skills);
+        skillList.value = JSON.parse(formData.skills);
       } catch {
         skillList.value = [];
       }
     }
+    
+    // 记录其他数据
+    console.log('教育经历数据:', educationsData);
+    console.log('工作经历数据:', experiencesData);
+    console.log('项目经历数据:', projectsData);
+    console.log('表单数据更新后:', formData);
   } catch (error) {
     console.error('获取求职者信息失败:', error);
-    // 显示错误信息
     ElMessage.error('获取个人信息失败，请检查网络连接');
   } finally {
+    console.log('数据加载完成');
     loading.value = false;
-    // 保存原始数据用于比较更改
-    originalData.value = JSON.parse(JSON.stringify(formData));
   }
 };
 
-/**
- * 重置表单
- */
-import { ElMessageBox } from 'element-plus';
-
-const handleReset = async () => {
-  try {
-    await ElMessageBox.confirm(
-      '此操作将清空您填写的信息，是否继续？',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    );
-
-    // 重置表单数据
-    formData.name = '';
-    formData.gender = undefined;
-    formData.email = '';
-    formData.age = undefined;
-    formData.educationLevel = undefined;
-    formData.graduateSchool = '';
-    formData.major = '';
-    formData.workYears = undefined;
-    formData.currentSalary = undefined;
-    formData.expectedSalary = undefined;
-    formData.currentStatus = 1;
-    formData.city = '';
-    formData.address = '';
-    formData.introduction = '';
-    formData.skills = '';
-    formData.avatar = '';
-    formData.resumeUrl = '';
-    skillList.value = [];
-
-    // 重置表单验证
-    formRef.value?.clearValidate();
-
-    ElMessage.success('信息已重置');
-  } catch {
-    // 用户取消操作
-  }
-};
-
-/**
- * 判断是否为首次填写（没有关联的求职者信息）
- */
+// 判断是否为首次填写（没有关联的求职者信息）
 const isFirstTime = computed(() => !formData.id || formData.id === 0);
 
-/**
- * 进入编辑模式
- */
+// 进入编辑模式
 const enterEditMode = () => {
   isEditing.value = true;
 };
 
-/**
- * 退出编辑模式
- */
+// 退出编辑模式
+import { ElMessageBox } from 'element-plus';
+
 const exitEditMode = async () => {
   try {
     // 如果有未保存的更改，提示用户确认
@@ -632,9 +995,7 @@ const exitEditMode = async () => {
   }
 };
 
-/**
- * 检查是否有未保存的更改
- */
+// 检查是否有未保存的更改
 const hasUnsavedChanges = () => {
   if (!originalData.value) return false;
   
@@ -642,14 +1003,50 @@ const hasUnsavedChanges = () => {
   return JSON.stringify(formData) !== JSON.stringify(originalData.value);
 };
 
-/**
- * 原始数据备份（用于比较是否有更改）
- */
+// 原始数据备份（用于比较是否有更改）
 const originalData = ref<any>(null);
 
-/**
- * 保存修改
- */
+// 重置表单
+const handleReset = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '此操作将清空您填写的信息，是否继续？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+
+    // 重置表单数据
+    formData.name = '';
+    formData.phone = ''; // 重置电话字段
+    formData.gender = undefined;
+    formData.email = '';
+    formData.age = undefined;
+    formData.workYears = undefined;
+    formData.currentSalary = undefined;
+    formData.expectedSalary = undefined;
+    formData.currentStatus = 1;
+    formData.city = '';
+    formData.address = '';
+    formData.introduction = '';
+    formData.skills = '';
+    formData.avatar = '';
+    formData.resumeUrl = '';
+    skillList.value = [];
+
+    // 重置表单验证
+    formRef.value?.clearValidate();
+
+    ElMessage.success('信息已重置');
+  } catch {
+    // 用户取消操作
+  }
+};
+
+// 保存修改
 const handleSave = async () => {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
@@ -661,12 +1058,10 @@ const handleSave = async () => {
     const requestData = {
       id: formData.id,
       name: formData.name,
+      phone: formData.phone, // 新增电话字段
       gender: formData.gender,
       email: formData.email,
       age: formData.age,
-      educationLevel: formData.educationLevel,
-      graduateSchool: formData.graduateSchool,
-      major: formData.major,
       workYears: formData.workYears,
       currentSalary: formData.currentSalary,
       expectedSalary: formData.expectedSalary,
@@ -691,6 +1086,53 @@ const handleSave = async () => {
   }
 };
 
+// ==================== 预览对话框相关函数 ====================
+// 处理预览对话框关闭
+const handlePreviewClose = (done: () => void) => {
+  // 可以在这里添加确认提示，比如："确定要关闭预览吗？"
+  done();
+};
+
+// 下载简历
+const downloadResume = () => {
+  if (!resumePreviewUrl.value) return;
+  
+  downloading.value = true;
+  try {
+    // 在新窗口打开下载，这通常会触发下载而不是预览
+    const a = document.createElement('a');
+    a.href = resumePreviewUrl.value;
+    a.download = `resume_${new Date().getTime()}.${currentPreviewExtension.value}`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    ElMessage.success('下载已开始');
+  } catch (error) {
+    console.error('下载失败:', error);
+    ElMessage.error('下载失败，请重试');
+  } finally {
+    downloading.value = false;
+  }
+};
+
+// 直接下载简历（在不支持预览的格式中使用）
+const downloadResumeDirectly = () => {
+  if (!resumePreviewUrl.value) return;
+  
+  const a = document.createElement('a');
+  a.href = resumePreviewUrl.value;
+  a.download = `resume_${new Date().getTime()}.${currentPreviewExtension.value}`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  
+  resumePreviewVisible.value = false;
+  ElMessage.success('简历已开始下载');
+};
+
 // ==================== 生命周期 ====================
 onMounted(() => {
   fetchData();
@@ -698,194 +1140,384 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== 页面容器 ==================== */
-.profile-container {
-  max-width: 1200px;
-  margin: 0 auto;
+/* ==================== BOSS直聘极简清爽版 · 个人信息管理 ==================== */
+:root {
+  --c-primary: #00beaa;
+  --c-primary-light: #f0faf8;
+  --c-white: #fff;
+  --c-bg: #f7f8fa;
+  --c-text-1: #111;
+  --c-text-2: #333;
+  --c-text-3: #666;
+  --c-border: #e5e6eb;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: 0.25s ease;
 }
 
-/* ==================== 页面标题 ==================== */
+* {
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  box-sizing: border-box;
+}
+
+/* 页面容器 */
+.profile-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+  background: var(--c-bg);
+  min-height: 100vh;
+}
+
+/* 页面头部 */
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  background: var(--c-white);
+  border-radius: var(--radius);
+  padding: 18px 24px;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  border: 1px solid var(--c-border);
 }
 
-.header-left h2 {
-  font-size: 24px;
-  color: #303133;
-  margin: 0 0 8px 0;
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.title-wrapper h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--c-text-1);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .header-left p {
   font-size: 14px;
-  color: #606266;
+  color: var(--c-text-3);
   margin: 0;
 }
 
+/* 按钮组 */
 .edit-actions {
   display: flex;
   gap: 12px;
 }
 
-/* ==================== 表单禁用状态样式 ==================== */
-.profile-form:deep(.el-form-item.is-disabled .el-form-item__label) {
-  color: #909399;
+.edit-btn,
+.action-btn {
+  border-radius: var(--radius-sm) !important;
+  height: 38px !important;
+  font-weight: 500 !important;
 }
 
-.profile-form:deep(.el-form-item.is-disabled .el-input .el-input__wrapper),
-.profile-form:deep(.el-form-item.is-disabled .el-select .el-input__wrapper),
-.profile-form:deep(.el-form-item.is-disabled .el-textarea .el-textarea__inner) {
-  background-color: #f5f7fa;
-  border-color: #e4e7ed;
-  color: #909399;
-}
-
-.profile-form:deep(.el-form-item.is-disabled .el-radio),
-.profile-form:deep(.el-form-item.is-disabled .el-checkbox) {
-  color: #909399;
-  cursor: not-allowed;
-}
-
-/* ==================== 加载状态 ==================== */
-.loading-wrapper {
-  background: #fff;
-  padding: 24px;
-  border-radius: 8px;
-}
-
-/* ==================== 内容布局 ==================== */
+/* 内容布局 ———— 这里统一宽度！！！ */
 .profile-content {
   display: flex;
   gap: 20px;
+  align-items: flex-start;
+  max-width: 1200px;    /* 统一整体宽度 */
+  margin: 0 auto;       /* 居中 */
 }
 
 .profile-left {
-  width: 280px;
+  width: 320px;
   flex-shrink: 0;
+  position: sticky;
+  top: 20px;
 }
 
+/* 右侧统一宽度 ———— 最关键！！！ */
 .profile-right {
   flex: 1;
   min-width: 0;
+  max-width: 860px;   /* 让工作/项目经历和这个宽度一致 */
 }
 
-/* ==================== 头像卡片 ==================== */
-.avatar-card {
+/* 卡片通用 */
+.profile-card {
+  background: var(--c-white);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
   margin-bottom: 20px;
+  transition: var(--transition);
+  overflow: hidden;
 }
 
+.profile-card:hover {
+  border-color: var(--c-primary);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+}
+
+.profile-card:deep(.el-card__header) {
+  background: #fafbfc;
+  border-bottom: 1px solid var(--c-border);
+  padding: 14px 20px;
+  font-weight: 500;
+  color: var(--c-text-1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 头像卡片 */
 .avatar-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
+  padding: 24px 0;
+}
+
+.avatar-preview-wrapper {
+  border-radius: 50%;
+  border: 4px solid var(--c-primary-light);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.avatar-preview-wrapper:hover {
+  transform: scale(1.05);
+  border-color: var(--c-primary);
 }
 
 .avatar-upload {
   margin-top: 16px;
+  width: 100%;
+}
+
+.avatar-upload .el-button {
+  width: 100%;
+  border-radius: var(--radius-sm);
 }
 
 .basic-info {
   text-align: center;
   margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-border);
 }
 
 .basic-info h3 {
-  font-size: 18px;
-  color: #303133;
-  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text-1);
+  margin: 0 0 8px 0;
 }
 
 .basic-info p {
   font-size: 14px;
-  color: #909399;
+  color: var(--c-text-2);
   margin: 4px 0;
 }
 
-/* ==================== 简历卡片 ==================== */
-.resume-card :deep(.el-card__body) {
-  padding-top: 0;
-}
-
+/* 简历卡片 */
 .resume-info {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  justify-content: space-between;
+  padding: 8px 0;
 }
 
-.resume-name {
-  flex: 1;
-  font-size: 14px;
-  color: #67c23a;
+.resume-view {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
 }
 
 .resume-upload {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
   padding: 20px 0;
-  gap: 10px;
 }
 
 .upload-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--c-text-3);
+  margin-top: 8px;
 }
 
-/* ==================== 表单样式 ==================== */
-.profile-form {
-  padding: 10px;
+/* 主表单容器 */
+.profile-form-container {
+  background: var(--c-white);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  padding: 20px;
 }
 
+/* 表单区块 */
 .form-section {
-  margin-bottom: 30px;
+  margin-bottom: 28px;
   padding-bottom: 20px;
-  border-bottom: 1px dashed #ebeef5;
+  border-bottom: 1px solid var(--c-border);
 }
 
-.form-section:last-of-type {
+.form-section:last-child {
   border-bottom: none;
   margin-bottom: 0;
 }
 
 .section-title {
-  font-size: 16px;
-  color: #303133;
-  margin-bottom: 20px;
-  padding-left: 10px;
-  border-left: 3px solid #409eff;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text-1);
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
 }
 
-/* ==================== 技能标签 ==================== */
+.section-title::before {
+  content: "";
+  width: 4px;
+  height: 14px;
+  background: var(--c-primary);
+  border-radius: 2px;
+  margin-right: 8px;
+}
+
+/* 表单样式 */
+.profile-form:deep(.el-form-item__label) {
+  font-size: 14px;
+  color: var(--c-text-2);
+  font-weight: 500;
+}
+
+.profile-form:deep(.el-input__wrapper),
+.profile-form:deep(.el-select .el-input__wrapper),
+.profile-form:deep(.el-textarea__inner) {
+  border-radius: var(--radius-sm);
+  border-color: var(--c-border);
+  transition: var(--transition);
+}
+
+.profile-form:deep(.el-input__wrapper.is-focus) {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 2px rgba(0, 190, 170, 0.15);
+}
+
+/* 技能标签 */
 .skills-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  padding: 12px;
+  background: #fafbfc;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--c-border);
 }
 
 .skill-tag {
+  background: var(--c-primary-light) !important;
+  color: var(--c-primary) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* 子组件间距 */
+.section-margin {
+  margin-top: 24px;
+}
+
+/* 工作/项目经历容器样式 */
+.experience-container {
+  background: var(--c-white);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  padding: 20px;
+  max-width: 860px; /* 与右侧容器宽度一致 */
+}
+
+.experience-content-wrapper {
+  width: 100%;
+}
+
+/* 集成模式下的头部样式优化 */
+.section-header.integrated-header {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 12px 0;
+  margin-bottom: 16px;
+}
+
+.section-header.integrated-header .section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.section-header.integrated-header .edit-btn,
+.section-header.integrated-header .action-btn {
+  padding: 8px 16px !important;
+  border-radius: var(--border-radius) !important;
+  font-weight: 500;
+  min-width: 100px;
   font-size: 14px;
 }
 
-.skill-input {
-  width: 100px;
+/* 加载 */
+.loading-wrapper {
+  background: var(--c-white);
+  border-radius: var(--radius);
+  padding: 40px;
 }
 
+/* 预览弹窗 */
+.preview-container {
+  width: 100%;
+  height: 75vh;
+  background: #fafbfc;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
 
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.unsupported-format {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.dialog-footer {
+  justify-content: flex-end;
+  gap: 12px;
+}
 
 /* ==================== 响应式 ==================== */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .profile-content {
     flex-direction: column;
   }
-
   .profile-left {
     width: 100%;
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .profile-container {
+    padding: 16px;
   }
 }
 </style>

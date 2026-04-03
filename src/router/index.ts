@@ -28,6 +28,31 @@ import JobSeekerProfile from '@/views/JobSeekerProfile.vue';
 import CompanyProfile from '@/views/CompanyProfile.vue';
 
 /**
+ * 求职者职位发现页面
+ */
+import JobDiscovery from '@/views/JobDiscovery.vue';
+
+/**
+ * BOSS职位管理页面
+ */
+import BossPositionManager from '@/views/BossPositionManager.vue';
+
+/**
+ * BOSS查看投递记录页面
+ */
+import BossApplications from '@/views/BossApplications.vue';
+
+/**
+ * 求职者查看投递记录页面
+ */
+import SeekerApplications from '@/views/SeekerApplications.vue';
+
+/**
+ * BOSS职位管理页面（暂用替代方案，实际可以创建单独页面）
+ * 我们直接在CompanyProfile中包含职位管理功能
+ */
+
+/**
  * 公共路由（无需登录即可访问）
  */
 export const constantRoutes: RouteRecordRaw[] = [
@@ -75,6 +100,46 @@ export const asyncRoutes: RouteRecordRaw[] = [
       title: '企业管理',
       requiresAuth: true,
       roles: [2] // 仅企业HR
+    }
+  },
+  {
+    path: '/discover',
+    name: 'JobDiscovery',
+    component: JobDiscovery,
+    meta: {
+      title: '发现职位',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
+    }
+  },
+  {
+    path: '/boss/positions',
+    name: 'BossPositionManager',
+    component: BossPositionManager,
+    meta: {
+      title: '职位管理',
+      requiresAuth: true,
+      roles: [2] // 仅企业HR
+    }
+  },
+  {
+    path: '/boss/applications',
+    name: 'BossApplications',
+    component: BossApplications,
+    meta: {
+      title: '投递管理',
+      requiresAuth: true,
+      roles: [2] // 仅企业HR
+    }
+  },
+  {
+    path: '/applications',
+    name: 'SeekerApplications',
+    component: SeekerApplications,
+    meta: {
+      title: '我的投递',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
     }
   }
 ];

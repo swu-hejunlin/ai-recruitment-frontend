@@ -43,18 +43,21 @@
 
       <!-- 内容区域 -->
       <div v-else class="company-content">
-        <!-- 首次填写提示 -->
-        <el-alert
-          v-if="isFirstTime"
-          title="首次填写"
-          type="info"
-          description="您正在首次填写企业信息，请完善以下信息后提交"
-          show-icon
-          :closable="false"
-          style="margin-bottom: 20px"
+        <!-- 企业信息内容 -->
+        <div>
+          <!-- 首次填写提示 -->
+          <el-alert
+            v-if="isFirstTime"
+            title="首次填写"
+            type="info"
+            description="您正在首次填写企业信息，请完善以下信息后提交"
+            show-icon
+            :closable="false"
+style="margin-bottom: 20px"
         />
+      </div>
 
-        <!-- 左侧：企业Logo和资质卡片 -->
+      <!-- 左侧：企业Logo和资质卡片 -->
         <div class="company-left">
           <!-- Logo卡片 -->
           <el-card class="logo-card">
@@ -290,7 +293,6 @@ import {
   uploadBusinessLicense,
   uploadFile
 } from '@/utils/api';
-import type { UpdateCompanyRequest } from '@/types';
 
 // ==================== 行业选项 ====================
 const industryOptions = [
@@ -687,6 +689,9 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* ==================== 标签切换 ==================== */
+/* 已移除标签切换样式，现在通过左侧导航栏切换 */
 
 /* ==================== 页面标题 ==================== */
 .page-header {
