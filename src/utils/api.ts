@@ -6,6 +6,7 @@
 import request from '@/utils/request';
 import type {
   JobSeekerInfo,
+  JobSeekerFullInfo,
   UpdateJobSeekerRequest,
   CompanyInfo,
   UpdateCompanyRequest,
@@ -196,6 +197,16 @@ export const uploadFilesBatch = (files: File[], fileType: FileType) => {
   }));
 };
 
+// ==================== 新增公司详情接口 ====================
+
+/**
+ * 根据ID查询公司详情
+ * @param id - 公司ID
+ */
+export const getCompanyById = (id: number) => {
+  return toData<CompanyInfo>(request.get(`/api/company/${id}`));
+};
+
 /**
  * 删除文件
  * @param fileUrl - 要删除的文件URL
@@ -341,6 +352,33 @@ export const getPositionsByCompany = (companyId: number) => {
 };
 
 /**
+ * 获取职位详情（含公司信息）
+ * @param id - 职位ID
+ */
+export const getPositionDetailWithCompany = (id: number) => {
+  return toData<{
+    position: PositionInfo;
+    company: CompanyInfo;
+  }>(request.get('/api/position/detail-with-company', { params: { id } }));
+};
+
+/**
+ * 获取最新职位列表（首页推荐）
+ * @param limit - 返回数量限制，默认10
+ */
+export const getLatestPositions = (limit?: number) => {
+  return toData<PositionInfo[]>(request.get('/api/position/latest', { params: { limit } }));
+};
+
+/**
+ * 获取热门职位列表（首页推荐）
+ * @param limit - 返回数量限制，默认10
+ */
+export const getHotPositions = (limit?: number) => {
+  return toData<PositionInfo[]>(request.get('/api/position/hot', { params: { limit } }));
+};
+
+/**
  * 发布新职位
  * @param data - 职位数据
  */
@@ -443,11 +481,28 @@ export const getCompanyFromApplication = (id: number) => {
 };
 
 /**
- * BOSS查看求职者信息（简历）
+ * BOSS查看求职者简要信息
+ * @param id - 投递记录ID
+ */
+export const getJobSeekerSimpleFromApplication = (id: number) => {
+  return toData<JobSeekerFromApplication>(request.get('/api/application/job-seeker/simple', { params: { id } }));
+};
+
+/**
+ * BOSS查看求职者信息（简历）- 兼容旧版本
+ * @deprecated 使用 getJobSeekerSimpleFromApplication 替代
  * @param id - 投递记录ID
  */
 export const getJobSeekerFromApplication = (id: number) => {
-  return toData<JobSeekerFromApplication>(request.get('/api/application/job-seeker', { params: { id } }));
+  return getJobSeekerSimpleFromApplication(id);
+};
+
+/**
+ * BOSS查看求职者完整在线简历
+ * @param id - 投递记录ID
+ */
+export const getJobSeekerFullResume = (id: number) => {
+  return toData<JobSeekerFullInfo>(request.get('/api/application/job-seeker/resume', { params: { id } }));
 };
 
 /**
@@ -494,8 +549,109 @@ export const markNotificationRead = (params: MarkNotificationReadRequest) => {
 };
 
 /**
+ * 标记通知为已读（简化版本）
+ * @param id - 通知ID
+ */
+export const markAsRead = (id: number) => {
+  return toData<null>(request.put('/api/notification/read', null, { params: { id } }));
+};
+
+/**
  * 标记所有通知为已读
  */
 export const markAllNotificationsRead = () => {
   return toData<null>(request.put('/api/notification/read-all'));
+};
+
+/**
+ * 标记所有通知为已读（简化版本）
+ */
+export const markAllAsRead = () => {
+  return toData<null>(request.put('/api/notification/read-all'));
+};
+
+// ==================== 面试 API ====================
+
+/**
+ * 创建面试邀请
+ * @param data - 面试请求数据
+ */
+export const createInterview = (data: { applicationId: number; interviewTime: string; interviewType: number; interviewAddress?: string; interviewLink?: string; remark?: string }) => {
+  return toData<number>(request.post('/api/interview/create', data));
+};
+
+/**
+ * 更新面试状态
+ * @param id - 面试ID
+ * @param status - 面试状态
+ */
+export const updateInterviewStatus = (id: number, status: number) => {
+  return toData<null>(request.put(`/api/interview/${id}/status`, null, { params: { status } }));
+};
+
+/**
+ * 获取企业HR的面试列表
+ */
+export const getCompanyInterviews = () => {
+  return toData<any[]>(request.get('/api/interview/company/list'));
+};
+
+/**
+ * 获取求职者的面试列表
+ */
+export const getJobSeekerInterviews = () => {
+  return toData<any[]>(request.get('/api/interview/job-seeker/list'));
+};
+
+/**
+ * 获取面试详情
+ * @param id - 面试ID
+ */
+export const getInterviewDetail = (id: number) => {
+  return toData<any>(request.get(`/api/interview/${id}`));
+};
+
+/**
+ * 删除面试
+ * @param id - 面试ID
+ */
+export const deleteInterview = (id: number) => {
+  return toData<null>(request.delete(`/api/interview/${id}`));
+};
+
+// ==================== 收藏 API ====================
+
+/**
+ * 添加收藏
+ * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
+ * @param targetId - 目标ID
+ */
+export const addFavorite = (targetType: number, targetId: number) => {
+  return toData<null>(request.post('/api/favorite/add', null, { params: { targetType, targetId } }));
+};
+
+/**
+ * 取消收藏
+ * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
+ * @param targetId - 目标ID
+ */
+export const removeFavorite = (targetType: number, targetId: number) => {
+  return toData<null>(request.delete('/api/favorite/remove', { params: { targetType, targetId } }));
+};
+
+/**
+ * 获取收藏列表
+ * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
+ */
+export const getFavorites = (targetType: number) => {
+  return toData<any[]>(request.get('/api/favorite/list', { params: { targetType } }));
+};
+
+/**
+ * 检查是否已收藏
+ * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
+ * @param targetId - 目标ID
+ */
+export const checkFavorite = (targetType: number, targetId: number) => {
+  return toData<{ isFavorite: boolean }>(request.get('/api/favorite/check', { params: { targetType, targetId } }));
 };

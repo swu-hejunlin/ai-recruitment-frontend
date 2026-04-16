@@ -21,7 +21,7 @@
               />
               <div class="applicant-name-wrapper">
                 <h3 class="applicant-name">
-                  {{ applicationDetail.jobSeeker?.name || applicationDetail.jobSeekerName || `求职者-${applicationDetail.jobSeekerId}` }}
+                  {{ applicationDetail.jobSeekerName || `求职者-${applicationDetail.jobSeekerId}` }}
                 </h3>
                 <div class="applicant-meta">
                   <el-tag v-if="applicationDetail.jobSeeker?.gender" size="small">
@@ -72,7 +72,7 @@
           <div class="position-header">
             <div class="position-title-salary">
               <h4 class="position-title">
-                {{ applicationDetail.positionTitle || `职位-${applicationDetail.positionId}` }}
+                {{ applicationDetail.positionTitle }}
               </h4>
               <div class="position-salary">
                 {{ applicationDetail.position?.salaryMin }}k-{{ applicationDetail.position?.salaryMax }}k
@@ -152,7 +152,7 @@
       <div class="detail-section" v-if="applicationDetail.jobSeeker?.resumeUrl">
         <h4 class="section-title">简历</h4>
         <div class="resume-section">
-          <el-button type="primary" @click="openResume(applicationDetail.jobSeeker!.resumeUrl!)">
+          <el-button type="primary" @click="openResume(applicationDetail.jobSeeker?.resumeUrl)">
             <el-icon><Document /></el-icon>
             查看简历
           </el-button>
@@ -185,9 +185,9 @@
               :key="value"
               :type="getStatusButtonType(value)"
               size="small"
-              @click="updateApplicationStatusHandler(parseInt(value) as ApplicationStatus)"
+              @click="updateApplicationStatusHandler(parseInt(value))"
               :loading="statusUpdateLoading && targetStatus === parseInt(value)"
-              :disabled="applicationDetail!.status === parseInt(value) || statusUpdateLoading"
+              :disabled="applicationDetail.status === parseInt(value) || statusUpdateLoading"
             >
               {{ label }}
             </el-button>
@@ -211,9 +211,10 @@
 import { ref, computed, onMounted, watchEffect } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Location, Document, Iphone, Message } from '@element-plus/icons-vue'
-import { getApplicationDetail, updateApplicationStatus } from '@/utils/api'
-import type { ApplicationInfo, ApplicationDetail as ApplicationDetailType, ApplicationStatus } from '@/types'
-import { APPLICATION_STATUS_MAP } from '@/types'
+import { getApplicationDetail, updateApplicationStatus } from '../../utils/api'
+import { useUserStore } from '../../stores/userStore'
+import type { ApplicationInfo, ApplicationDetail as ApplicationDetailType, ApplicationStatus } from '../../types'
+import { APPLICATION_STATUS_MAP } from '../../types'
 
 interface Props {
   application: ApplicationInfo
@@ -236,6 +237,57 @@ const applicationDetail = ref<ApplicationDetailType['application'] | null>(null)
 // AI评分本地变量
 const localAiScore = ref(0)
 
+// 加载投递详情
+const loadApplicationDetail = async () => {
+  try {
+    loading.value = true
+    console.log('开始加载投递详情, ID:', props.application.id)
+    
+    const response = await getApplicationDetail(props.application.id)
+    console.log('投递详情API响应:', response)
+    
+    // 处理API响应，确保数据结构正确
+    if (response && response.application) {
+      applicationDetail.value = response.application
+      
+      // 确保关键字段有值
+      if (applicationDetail.value) {
+        const appDetail = applicationDetail.value
+        appDetail.jobSeekerName = appDetail.jobSeekerName || `求职者-${appDetail.jobSeekerId}`
+        appDetail.positionTitle = appDetail.positionTitle || `职位-${appDetail.positionId}`
+        appDetail.companyName = appDetail.companyName || `公司-${appDetail.companyId}`
+      }
+    } else {
+      // 如果API响应没有application字段，直接使用传入的application作为fallback
+      console.warn('API响应缺少application字段，使用传入的数据作为fallback')
+      applicationDetail.value = {
+        ...props.application,
+        jobSeekerName: props.application.jobSeekerName || `求职者-${props.application.jobSeekerId}`,
+        positionTitle: props.application.positionTitle || `职位-${props.application.positionId}`,
+        companyName: props.application.companyName || `公司-${props.application.companyId}`
+      }
+    }
+    
+    // 设置本地AI评分
+    if (applicationDetail.value?.aiScore) {
+      localAiScore.value = applicationDetail.value.aiScore
+    }
+    
+  } catch (error) {
+    console.error('加载投递详情失败:', error)
+    ElMessage.error('加载投递详情失败')
+    // 错误时显示传入的基本数据
+    applicationDetail.value = {
+      ...props.application,
+      jobSeekerName: props.application.jobSeekerName || `求职者-${props.application.jobSeekerId}`,
+      positionTitle: props.application.positionTitle || `职位-${props.application.positionId}`,
+      companyName: props.application.companyName || `公司-${props.application.companyId}`
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 // 状态选项
 const statusOptions = {
   1: '待查看',
@@ -257,52 +309,37 @@ watchEffect(() => {
   }
 })
 
-// 加载投递详情
-const loadApplicationDetail = async () => {
-  try {
-    loading.value = true
-    const response = await getApplicationDetail(props.application.id)
-    applicationDetail.value = response.application
-    
-    // 设置本地AI评分
-    if (applicationDetail.value.aiScore) {
-      localAiScore.value = applicationDetail.value.aiScore
-    }
-    
-  } catch (error) {
-    console.error('加载投递详情失败:', error)
-    ElMessage.error('加载投递详情失败')
-  } finally {
-    loading.value = false
-  }
-}
-
 // 更新投递状态
-const updateApplicationStatusHandler = async (newStatus: ApplicationStatus) => {
+const updateApplicationStatusHandler = async (newStatus: number) => {
   try {
     statusUpdateLoading.value = true
-    targetStatus.value = newStatus
+    const status = newStatus as ApplicationStatus
+    targetStatus.value = status
     
     await ElMessageBox.confirm(
-      `确定要将投递状态更新为"${statusOptions[newStatus]}"吗？`,
+      `确定要将投递状态更新为"${statusOptions[status]}"吗？`,
       '确认更新',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     )
     
     await updateApplicationStatus({
       id: props.application.id,
-      status: newStatus
+      status: status
     })
     
     ElMessage.success('投递状态更新成功')
     
     // 更新本地数据
     if (applicationDetail.value) {
-      applicationDetail.value.status = newStatus
+      applicationDetail.value.status = status
     }
     
+    // 立即刷新角标计数
+    const userStore = useUserStore()
+    userStore.refreshCounts()
+    
     // 通知父组件
-    emit('status-updated', props.application.id, newStatus)
+    emit('status-updated', props.application.id, status)
     
   } catch (error) {
     console.error('更新投递状态失败:', error)

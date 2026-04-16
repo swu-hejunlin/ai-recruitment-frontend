@@ -48,6 +48,26 @@ import BossApplications from '@/views/BossApplications.vue';
 import SeekerApplications from '@/views/SeekerApplications.vue';
 
 /**
+ * 公司详情页面
+ */
+import CompanyDetail from '@/views/CompanyDetail.vue';
+
+/**
+ * BOSS面试管理页面
+ */
+import BossInterviewManager from '@/views/BossInterviewManager.vue';
+
+/**
+ * 求职者面试列表页面
+ */
+import SeekerInterviewList from '@/views/SeekerInterviewList.vue';
+
+/**
+ * 收藏管理页面
+ */
+import FavoriteManager from '@/views/FavoriteManager.vue';
+
+/**
  * BOSS职位管理页面（暂用替代方案，实际可以创建单独页面）
  * 我们直接在CompanyProfile中包含职位管理功能
  */
@@ -63,6 +83,15 @@ export const constantRoutes: RouteRecordRaw[] = [
     meta: {
       title: '登录',
       requiresAuth: false
+    }
+  },
+  {
+    path: '/company/:id(\\d+)',
+    name: 'CompanyDetail',
+    component: CompanyDetail,
+    meta: {
+      title: '公司详情',
+      requiresAuth: false // 无需登录即可查看
     }
   }
 ];
@@ -141,6 +170,36 @@ export const asyncRoutes: RouteRecordRaw[] = [
       requiresAuth: true,
       roles: [1] // 仅求职者
     }
+  },
+  {
+    path: '/boss/interviews',
+    name: 'BossInterviewManager',
+    component: BossInterviewManager,
+    meta: {
+      title: '面试管理',
+      requiresAuth: true,
+      roles: [2] // 仅企业HR
+    }
+  },
+  {
+    path: '/interviews',
+    name: 'SeekerInterviewList',
+    component: SeekerInterviewList,
+    meta: {
+      title: '我的面试',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
+    }
+  },
+  {
+    path: '/favorites',
+    name: 'FavoriteManager',
+    component: FavoriteManager,
+    meta: {
+      title: '我的收藏',
+      requiresAuth: true,
+      roles: [1, 2] // 求职者和企业HR都可访问
+    }
   }
 ];
 
@@ -157,21 +216,38 @@ const router = createRouter({
  */
 router.beforeEach((to, _from) => {
   // 设置页面标题
-  if (to.meta?.title) {
+  if (to.meta && to.meta.title) {
     document.title = `${to.meta.title} - 智能招聘平台`;
   }
 
   const userStore = useUserStore();
   const isLogin = userStore.isLogin;
 
+  // 记录关键调试信息但不频繁打印
+  if (to.path !== '/' && to.path !== '/login') {
+    console.log(`[路由] 访问 ${to.path}, isLogin: ${isLogin}`);
+  }
+  
+  // 特别关注/profile路由的访问
+  if (to.path === '/profile') {
+    console.log(`[路由/profile] 访问我的简历页面`);
+    console.log(`[路由/profile] store状态:`, {
+      isLogin,
+      token: userStore.token ? userStore.token.substring(0, 30) + '...' : null,
+      userInfo: userStore.userInfo,
+      userRole: userStore.userInfo?.role
+    });
+  }
+
   // 判断路由是否需要登录
   const requiresAuth = (to.meta as any)?.requiresAuth !== false;
 
-  // 如果路由需要登录但用户未登录，跳转到登录页
+  // 如果路由需要登录但用户未登录，强制跳转到登录页
   if (requiresAuth && !isLogin) {
+    console.log(`[路由] 用户未登录，强制跳转到登录页`);
     return {
       path: '/login',
-      query: { redirect: to.fullPath } // 记录目标路由，登录后跳转
+      query: { redirect: to.fullPath }
     };
   }
 

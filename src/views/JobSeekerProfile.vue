@@ -907,10 +907,31 @@ const fetchData = async () => {
       return;
     }
     
+// 检查token状态
+    console.log('当前token状态检查:');
+    console.log('  - localStorage token:', localStorage.getItem('token')?.substring(0, 30) + '...');
+    console.log('  - store token:', userStore.token?.substring(0, 30) + '...');
+    console.log('  - store isLogin:', userStore.isLogin);
+    
     console.log('开始获取求职者信息...');
-    const res: any = await getJobSeekerInfo();
-    console.log('获取到的求职者信息:', res);
-
+    
+    let res: any;
+    try {
+      res = await getJobSeekerInfo();
+      console.log('获取到的求职者信息:', res);
+    } catch (error: any) {
+      console.error('获取求职者信息失败:', error);
+      // 如果是401错误，不在这里处理，让request.ts的统一处理
+      // 但我们可以记录更多信息
+      if (error.response?.status === 401) {
+        console.error('API返回401未授权，即将跳转到登录页');
+        // 记录当前token状态
+        console.log('当前localStorage token:', localStorage.getItem('token'));
+        console.log('当前store token:', userStore.token);
+      }
+      throw error; // 重新抛出错误，让上层处理
+    }
+    
     // 根据API响应结构，res可能是完整的响应对象
     // 处理不同的响应结构
     let jobSeekerData: any;

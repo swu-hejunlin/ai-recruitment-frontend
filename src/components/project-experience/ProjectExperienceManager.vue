@@ -305,7 +305,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import { Plus, Edit, Delete, User, Calendar, Close } from '@element-plus/icons-vue';
+import { Plus, Edit, Delete, User, Calendar, Close, Briefcase } from '@element-plus/icons-vue';
+import { useUserStore } from '@/stores/userStore';
 import {
   getProjectExperiences,
   addProjectExperience,
@@ -330,6 +331,7 @@ const props = withDefaults(defineProps<{
 });
 
 // ==================== 状态管理 ====================
+const userStore = useUserStore();
 const loading = ref(false);
 const localIsEditing = ref(false); // 本地编辑状态
 const submitting = ref(false);
@@ -387,12 +389,24 @@ onMounted(() => {
  */
 const fetchProjects = async () => {
   try {
+    // 检查用户是否登录且是求职者
+    if (!userStore.isLogin || userStore.userInfo?.role !== 1) {
+      console.log('用户未登录或不是求职者，跳过项目经历获取');
+      projects.value = [];
+      loading.value = false;
+      return;
+    }
+
     loading.value = true;
     const res = await getProjectExperiences();
     projects.value = res || [];
   } catch (error) {
     console.error('获取项目经历失败:', error);
-    ElMessage.error('获取项目经历失败，请重试');
+    // 401错误已经在request.ts中处理，这里不需要再显示错误消息
+    // 仅处理非认证错误
+    if ((error as any)?.status !== 401) {
+      ElMessage.error('获取项目经历失败，请重试');
+    }
   } finally {
     loading.value = false;
   }

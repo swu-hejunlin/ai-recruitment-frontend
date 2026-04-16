@@ -35,7 +35,7 @@
                 >
                   <el-option label="全部" value="" />
                   <el-option
-                    v-for="(label, value) in statusOptions"
+                    v-for="(label, value) in APPLICATION_STATUS_MAP"
                     :key="value"
                     :label="label"
                     :value="value"
@@ -113,11 +113,18 @@
               <template #default="{ row }">
                 <div class="applicant-info">
                   <div v-if="row.jobSeeker?.avatar" class="applicant-avatar">
-                    <img :src="row.jobSeeker.avatar" alt="求职者头像" />
+                    <img 
+                      :src="row.jobSeeker.avatar" 
+                      :alt="row.jobSeekerName || row.jobSeeker?.name || `求职者-${row.jobSeekerId}`"
+                      @error="handleAvatarError($event, row)" 
+                    />
+                  </div>
+                  <div v-else class="default-avatar">
+                    {{ getInitials(row.jobSeekerName) }}
                   </div>
                   <div class="applicant-details">
-                    <div class="applicant-name">
-                      {{ row.jobSeekerName || `求职者-${row.jobSeekerId}` }}
+                    <div class="applicant-name" :title="row.jobSeekerName">
+                      {{ row.jobSeekerName }}
                     </div>
                     <div class="applicant-meta">
                       <el-tag size="small" v-if="row.jobSeeker?.workYears">
@@ -135,16 +142,24 @@
             <el-table-column prop="positionTitle" label="投递职位" width="180">
               <template #default="{ row }">
                 <div class="position-info">
-                  <div class="position-title">
-                    {{ row.positionTitle || `职位-${row.positionId}` }}
+                  <div class="position-title" :title="row.positionTitle">
+                    {{ row.positionTitle }}
                   </div>
                   <div class="position-meta">
-                    <span class="salary">
-                      {{ row.position?.salaryMin }}k-{{ row.position?.salaryMax }}k
+                    <span class="salary" v-if="row.position?.salaryMin && row.position?.salaryMax">
+                      {{ row.position.salaryMin }}k-{{ row.position.salaryMax }}k
                     </span>
-                    <span class="city">
+                    <span class="salary" v-else-if="row.position?.salary">
+                      {{ row.position.salary }}
+                    </span>
+                    <span class="no-salary" v-else>面议</span>
+                    <span class="city" v-if="row.position?.city">
                       <el-icon><Location /></el-icon>
-                      {{ row.position?.city }}
+                      {{ row.position.city }}
+                    </span>
+                    <span class="city" v-else-if="row.position?.workPlace">
+                      <el-icon><Location /></el-icon>
+                      {{ row.position.workPlace }}
                     </span>
                   </div>
                 </div>
@@ -186,7 +201,7 @@
               </template>
             </el-table-column>
 
-            <el-table-column label="操作" width="500" align="center" fixed="right">
+            <el-table-column label="操作" width="450" align="center" fixed="right">
               <template #default="{ row }">
                 <div class="action-buttons">
                   <el-button
@@ -195,17 +210,7 @@
                     @click="viewApplicationDetail(row)"
                     :disabled="loadingDetail"
                   >
-                    投递详情
-                  </el-button>
-                  
-                  <el-button
-                    type="success"
-                    size="small"
-                    plain
-                    @click="viewCompanyInfo(row.id)"
-                    :loading="loadingCompany && selectedApplicationForInfo?.id === row.id"
-                  >
-                    公司信息
+                    查看详情
                   </el-button>
                   
                   <el-button
@@ -215,7 +220,7 @@
                     @click="viewJobSeekerInfo(row.id)"
                     :loading="loadingJobSeeker && selectedApplicationForInfo?.id === row.id"
                   >
-                    求职者信息
+                    求职者简历
                   </el-button>
                   
                   <el-button
@@ -225,7 +230,17 @@
                     @click="viewPositionInfo(row.id)"
                     :loading="loadingPosition && selectedApplicationForInfo?.id === row.id"
                   >
-                    职位信息
+                    职位详情
+                  </el-button>
+                  
+                  <el-button
+                    :type="row.isFavorite ? 'warning' : 'info'"
+                    size="small"
+                    plain
+                    @click="handleFavorite(row)"
+                  >
+                    <el-icon><Star /></el-icon>
+                    {{ row.isFavorite ? '已收藏' : '收藏' }}
                   </el-button>
                   
                   <el-dropdown
@@ -241,7 +256,7 @@
                     <template #dropdown>
                       <el-dropdown-menu>
                         <el-dropdown-item
-                          v-for="(label, value) in statusOptions"
+                          v-for="(label, value) in APPLICATION_STATUS_MAP"
                           :key="value"
                           :command="value"
                           :disabled="row.status === parseInt(value)"
@@ -274,80 +289,16 @@
       <!-- 投递详情对话框 -->
       <el-dialog
         v-model="detailDialogVisible"
-        :title="`投递详情 - ${selectedApplication?.positionTitle || ''}`"
+        :title="`查看详情 - ${selectedApplication?.positionTitle || '未知职位'}`"
         width="900px"
         top="5vh"
+        @close="handleDetailDialogClose"
       >
         <ApplicationDetailDialog
           v-if="selectedApplication"
           :application="selectedApplication"
           @status-updated="handleStatusUpdated"
         />
-      </el-dialog>
-
-      <!-- 公司信息对话框 -->
-      <el-dialog
-        v-model="companyDialogVisible"
-        :title="`公司信息 - ${selectedApplicationForInfo?.positionTitle || ''}`"
-        width="700px"
-        top="5vh"
-      >
-        <div v-if="loadingCompany" class="loading-container">
-          <el-icon class="loading-icon"><Loading /></el-icon>
-          <p>加载公司信息中...</p>
-        </div>
-        
-        <div v-else-if="companyInfo" class="company-info-content">
-          <!-- 公司基本信息 -->
-          <div class="company-header">
-            <div class="company-logo-name">
-              <img 
-                v-if="companyInfo.logo" 
-                :src="companyInfo.logo" 
-                alt="公司logo" 
-                class="company-logo"
-              />
-              <div class="company-name-wrapper">
-                <h3>{{ companyInfo.companyName }}</h3>
-                <div class="company-tags">
-                  <el-tag type="info">{{ companyInfo.industry || '未填写' }}</el-tag>
-                  <el-tag>{{ SCALE_MAP[companyInfo.scale] || '未知规模' }}</el-tag>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="company-info-section">
-            <h4>公司信息</h4>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">所在城市：</span>
-                <span class="info-value">{{ companyInfo.city || '未填写' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">企业规模：</span>
-                <span class="info-value">{{ SCALE_MAP[companyInfo.scale] || '未填写' }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="company-description-section" v-if="companyInfo.description">
-            <h4>公司简介</h4>
-            <div class="description-content">
-              {{ companyInfo.description }}
-            </div>
-          </div>
-          
-          <div v-else class="empty-description">
-            <p>暂无公司简介</p>
-          </div>
-        </div>
-        
-        <div v-else class="error-container">
-          <el-empty description="加载公司信息失败">
-            <p>无法加载公司信息，请稍后重试</p>
-          </el-empty>
-        </div>
       </el-dialog>
 
       <!-- 求职者信息对话框 -->
@@ -457,7 +408,14 @@
               type="primary"
               @click="openResume(jobSeekerInfo!.resumeUrl!)"
             >
-              查看简历
+              查看附件简历
+            </el-button>
+            <el-button
+              type="primary"
+              plain
+              @click="viewOnlineResume(selectedApplicationForInfo?.id || 0)"
+            >
+              查看在线简历
             </el-button>
           </span>
         </template>
@@ -520,6 +478,24 @@
           </el-empty>
         </div>
       </el-dialog>
+
+      <!-- 在线简历对话框 -->
+      <el-dialog
+        v-model="onlineResumeDialogVisible"
+        :title="`求职者完整在线简历`"
+        width="900px"
+        top="5vh"
+      >
+        <JobSeekerOnlineResumeDialog
+          v-if="onlineResumeDialogVisible && onlineResumeApplicationId"
+          :application-id="onlineResumeApplicationId"
+        />
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="onlineResumeDialogVisible = false">关闭</el-button>
+          </span>
+        </template>
+      </el-dialog>
     </div>
   </AppLayout>
 </template>
@@ -527,19 +503,25 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Search, Loading, Location, ArrowDown, Document } from '@element-plus/icons-vue'
-import AppLayout from '@/components/AppLayout.vue'
-import ApplicationDetailDialog from '@/components/application/ApplicationDetailDialog.vue'
+import { Refresh, Search, Loading, Location, ArrowDown, Document, Star } from '@element-plus/icons-vue'
+import AppLayout from '../components/AppLayout.vue'
+import ApplicationDetailDialog from '../components/application/ApplicationDetailDialog.vue'
+import JobSeekerOnlineResumeDialog from '../components/application/JobSeekerOnlineResumeDialog.vue'
+import { useUserStore } from '../stores/userStore'
 import { 
   getBossApplications, 
   updateApplicationStatus, 
-  getCompanyFromApplication, 
-  getJobSeekerFromApplication,
+  getJobSeekerSimpleFromApplication,
   getPositionFromApplication,
-  markApplicationAsRead
-} from '@/utils/api'
-import type { ApplicationInfo, ApplicationStatus, CompanyFromApplication, JobSeekerFromApplication, PositionFromApplication } from '@/types'
-import { APPLICATION_STATUS_MAP, SCALE_MAP } from '@/types'
+  markApplicationAsRead,
+  addFavorite, 
+  removeFavorite, 
+  checkFavorite
+} from '../utils/api'
+import type { ApplicationInfo, ApplicationStatus, JobSeekerFromApplication, PositionFromApplication } from '../types'
+import { APPLICATION_STATUS_MAP } from '../types'
+
+const userStore = useUserStore()
 
 // 筛选项
 const filterStatus = ref<string>('')
@@ -559,11 +541,6 @@ const tableData = ref<ApplicationInfo[]>([])
 const detailDialogVisible = ref(false)
 const selectedApplication = ref<ApplicationInfo | null>(null)
 
-// 公司信息对话框
-const companyDialogVisible = ref(false)
-const companyInfo = ref<CompanyFromApplication | null>(null)
-const loadingCompany = ref(false)
-
 // 求职者信息对话框
 const jobSeekerDialogVisible = ref(false)
 const jobSeekerInfo = ref<JobSeekerFromApplication | null>(null)
@@ -577,17 +554,12 @@ const loadingPosition = ref(false)
 // 简历加载状态
 const loadingResume = ref(false)
 
+// 在线简历对话框
+const onlineResumeDialogVisible = ref(false)
+const onlineResumeApplicationId = ref<number | null>(null)
+
 // 当前查看信息的应用ID
 const selectedApplicationForInfo = ref<ApplicationInfo | null>(null)
-
-// 状态选项
-const statusOptions: Record<ApplicationStatus, string> = {
-  1: '待查看',
-  2: '已查看',
-  3: '面试中',
-  4: '不合适',
-  5: '录用'
-}
 
 // 计算属性
 const hasActiveFilters = computed(() => {
@@ -598,7 +570,7 @@ const hasMoreFilters = computed(() => {
   return true // 可以扩展更多筛选条件
 })
 
-// 状态统计
+// 状态统计 (注意：目前仅统计当前页数据，完整统计需后端支持)
 const pendingCount = computed(() => {
   return tableData.value.filter(item => item.status === 1).length
 })
@@ -615,18 +587,47 @@ const hiredCount = computed(() => {
 const fetchApplications = async () => {
   try {
     loading.value = true
-    const response = await getBossApplications({
+    const params = {
       status: filterStatus.value ? parseInt(filterStatus.value) as ApplicationStatus : undefined,
       pageNum: pageNum.value,
       pageSize: pageSize.value
-    })
+    }
     
-    tableData.value = response.records || []
+    const response = await getBossApplications(params)
+    
+    if (!response) {
+      tableData.value = []
+      totalApplications.value = 0
+      return
+    }
+    
+    const records = response.records || []
+    
+    const enhancedRecords = await Promise.all(records.map(async (record: ApplicationInfo) => {
+      // 检查是否已收藏该求职者
+      let isFavorite = false
+      try {
+        const response = await checkFavorite(3, record.jobSeekerId)
+        isFavorite = response.isFavorite
+      } catch (error) {
+        console.error('检查收藏状态失败:', error)
+      }
+      
+      return {
+        ...record,
+        jobSeekerName: record.jobSeekerName || `求职者-${record.jobSeekerId}`,
+        positionTitle: record.positionTitle || `职位-${record.positionId}`,
+        companyName: record.companyName || `公司-${record.companyId}`,
+        aiScore: record.aiScore || 0,
+        isFavorite
+      } as ApplicationInfo & { isFavorite: boolean }
+    }))
+    
+    tableData.value = enhancedRecords
     totalApplications.value = response.total || 0
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取投递列表失败:', error)
-    ElMessage.error('获取投递列表失败')
+    ElMessage.error('获取投递列表失败：' + (error.message || '网络错误'))
     tableData.value = []
     totalApplications.value = 0
   } finally {
@@ -635,27 +636,20 @@ const fetchApplications = async () => {
 }
 
 // 查看投递详情
-const viewApplicationDetail = (application: ApplicationInfo) => {
+const viewApplicationDetail = async (application: ApplicationInfo) => {
   selectedApplication.value = application
   detailDialogVisible.value = true
-}
-
-// 查看公司信息
-const viewCompanyInfo = async (applicationId: number) => {
-  try {
-    loadingCompany.value = true
-    // 查找对应的应用
-    const app = tableData.value.find(item => item.id === applicationId)
-    selectedApplicationForInfo.value = app || null
-    
-    const response = await getCompanyFromApplication(applicationId)
-    companyInfo.value = response
-    companyDialogVisible.value = true
-  } catch (error) {
-    console.error('获取公司信息失败:', error)
-    ElMessage.error('获取公司信息失败')
-  } finally {
-    loadingCompany.value = false
+  
+  // 标记为已查看
+  if (application.status === 1) {
+    try {
+      await markApplicationAsRead(application.id)
+      application.status = 2
+      // 立即刷新全局计数
+      userStore.refreshCounts()
+    } catch (error) {
+      console.error('标记已查看失败:', error)
+    }
   }
 }
 
@@ -663,20 +657,19 @@ const viewCompanyInfo = async (applicationId: number) => {
 const viewJobSeekerInfo = async (applicationId: number) => {
   try {
     loadingJobSeeker.value = true
-    // 查找对应的应用
     const app = tableData.value.find(item => item.id === applicationId)
     selectedApplicationForInfo.value = app || null
     
-    const response = await getJobSeekerFromApplication(applicationId)
+    const response = await getJobSeekerSimpleFromApplication(applicationId)
     jobSeekerInfo.value = response
     
     // 标记为已查看
     if (app && app.status === 1) {
       try {
         await markApplicationAsRead(applicationId)
-// 更新本地状态
-    app.status = 2
-    // 统计会自动更新，因为是计算属性
+        app.status = 2
+        // 立即刷新全局计数
+        userStore.refreshCounts()
       } catch (error) {
         console.error('标记已查看失败:', error)
       }
@@ -691,11 +684,16 @@ const viewJobSeekerInfo = async (applicationId: number) => {
   }
 }
 
+// 查看求职者完整在线简历
+const viewOnlineResume = (applicationId: number) => {
+  onlineResumeApplicationId.value = applicationId
+  onlineResumeDialogVisible.value = true
+}
+
 // 查看职位信息
 const viewPositionInfo = async (applicationId: number) => {
   try {
     loadingPosition.value = true
-    // 查找对应的应用
     const app = tableData.value.find(item => item.id === applicationId)
     selectedApplicationForInfo.value = app || null
     
@@ -722,7 +720,7 @@ const handleStatusChangeMenu = async (application: ApplicationInfo, newStatus: s
     loadingStatusChange.value = true
     
     await ElMessageBox.confirm(
-      `确定要将"${application.jobSeekerName || '该求职者'}"的投递状态更新为"${statusOptions[parseInt(newStatus) as ApplicationStatus]}"吗？`,
+      `确定要将"${application.jobSeekerName || '该求职者'}"的投递状态更新为"${APPLICATION_STATUS_MAP[parseInt(newStatus) as ApplicationStatus]}"吗？`,
       '确认更新',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     )
@@ -733,6 +731,9 @@ const handleStatusChangeMenu = async (application: ApplicationInfo, newStatus: s
     })
     
     ElMessage.success('投递状态更新成功')
+    
+    // 立即刷新全局计数
+    userStore.refreshCounts()
     
     // 更新本地数据
     const index = tableData.value.findIndex(item => item.id === application.id)
@@ -756,6 +757,8 @@ const handleStatusUpdated = (applicationId: number, newStatus: ApplicationStatus
   if (index !== -1) {
     tableData.value[index].status = newStatus
   }
+  // 立即刷新全局计数
+  userStore.refreshCounts()
 }
 
 // 重置筛选条件
@@ -794,6 +797,12 @@ const formatDate = (dateString: string): string => {
   }
 }
 
+// 处理详情对话框关闭
+const handleDetailDialogClose = () => {
+  // 可以在这里添加清理逻辑
+  console.log('详情对话框关闭')
+}
+
 const getStatusTagType = (status: ApplicationStatus): string => {
   const typeMap: Record<ApplicationStatus, string> = {
     1: 'danger',    // 待查看 - 红色
@@ -822,6 +831,44 @@ const openResume = (resumeUrl: string) => {
   }
 }
 
+// 处理头像加载错误
+const handleAvatarError = (event: Event, row: ApplicationInfo) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent) {
+    parent.innerHTML = `<div class="default-avatar">${getInitials(row.jobSeekerName)}</div>`
+  }
+}
+
+// 处理收藏操作
+const handleFavorite = async (row: ApplicationInfo) => {
+  try {
+    if (row.isFavorite) {
+      // 取消收藏
+      await removeFavorite(3, row.jobSeekerId)
+      row.isFavorite = false
+      ElMessage.success('已取消收藏该求职者')
+    } else {
+      // 添加收藏
+      await addFavorite(3, row.jobSeekerId)
+      row.isFavorite = true
+      ElMessage.success('收藏成功')
+    }
+  } catch (error) {
+    console.error('处理收藏操作失败:', error)
+    ElMessage.error('操作失败，请稍后重试')
+  }
+}
+
+// 获取姓名首字母
+const getInitials = (name?: string): string => {
+  if (!name) return '?'
+  // 提取中文字符或英文字符的首字符
+  const firstChar = name.charAt(0)
+  return firstChar.toUpperCase()
+}
+
 // 解析技能标签
 const parseSkills = (skillsString: string): string[] => {
   if (!skillsString) return []
@@ -840,10 +887,50 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ==================== 统计信息优化 ==================== */
+.stats-row {
+  margin-top: 16px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f2f5;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.stats-row :deep(.el-statistic) {
+  --el-statistic-title-font-size: 13px;
+  --el-statistic-content-font-size: 24px;
+  --el-statistic-content-font-weight: 700;
+  min-width: 100px;
+}
+
+.stats-row :deep(.el-statistic__title) {
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.stats-row :deep(.el-statistic__content) {
+  color: #303133;
+}
+
+.stats-row :deep(.el-statistic:not(:last-child)) {
+  margin-right: 48px;
+  position: relative;
+}
+
+.stats-row :deep(.el-statistic:not(:last-child)::after) {
+  content: '';
+  position: absolute;
+  right: -24px;
+  top: 10px;
+  height: 24px;
+  width: 1px;
+  background-color: #f0f2f5;
+}
+
+/* ==================== 页面布局样式 ==================== */
 .boss-applications-container {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 20px;
 }
 
 .page-header {
@@ -851,15 +938,15 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  padding: 16px 24px;
+  padding: 20px 24px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .header-left h2 {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 8px 0;
   color: #303133;
 }
@@ -870,17 +957,18 @@ onMounted(() => {
   margin: 0;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
 .filter-section {
   margin-bottom: 24px;
 }
 
+.filter-section :deep(.el-card) {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
 .filter-content {
-  padding: 16px;
+  padding: 4px;
 }
 
 .filter-row {
@@ -888,7 +976,6 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
 .filter-group {
@@ -903,69 +990,63 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.stats-row {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
 .loading-container,
 .empty-container {
-  padding: 40px 20px;
+  padding: 80px 20px;
   text-align: center;
   background: #fff;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .loading-content {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .loading-icon {
-  font-size: 40px;
-  color: #409eff;
+  font-size: 48px;
+  color: #00beaa;
   animation: spin 1.5s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.applications-list .el-card {
-  border-radius: 8px;
+.applications-list :deep(.el-card) {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 16px;
   color: #303133;
 }
 
-/* 求职者信息样式 */
+/* ==================== 表格内部样式 ==================== */
 .applicant-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.applicant-avatar {
-  width: 40px;
-  height: 40px;
+.applicant-avatar, .default-avatar {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid #f0f2f5;
 }
 
 .applicant-avatar img {
@@ -974,16 +1055,27 @@ onMounted(() => {
   object-fit: cover;
 }
 
+.default-avatar {
+  background: linear-gradient(135deg, #00beaa 0%, #00a896 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  border: none;
+}
+
 .applicant-details {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
 .applicant-name {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   color: #303133;
   white-space: nowrap;
   overflow: hidden;
@@ -992,19 +1084,22 @@ onMounted(() => {
 
 .applicant-meta {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* 职位信息样式 */
+.applicant-meta :deep(.el-tag) {
+  border-radius: 4px;
+}
+
 .position-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .position-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   color: #303133;
   white-space: nowrap;
   overflow: hidden;
@@ -1015,22 +1110,21 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: #909399;
 }
 
 .salary {
   color: #f56c6c;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .city {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
-/* AI评分样式 */
 .ai-score {
   display: flex;
   flex-direction: column;
@@ -1038,203 +1132,39 @@ onMounted(() => {
   gap: 4px;
 }
 
-.ai-score .el-rate {
-  display: inline-block;
-}
-
 .score-value {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   color: #ff9900;
-  font-weight: 600;
 }
 
 .no-score {
-  font-size: 12px;
-  color: #909399;
-  font-style: italic;
+  font-size: 13px;
+  color: #c0c4cc;
 }
 
-/* 操作按钮 */
 .action-buttons {
   display: flex;
   justify-content: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* 分页样式 */
 .pagination-container {
+  margin-top: 32px;
   display: flex;
   justify-content: center;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
 }
 
-/* 对话框通用样式 */
-.loading-container {
-  padding: 60px 20px;
-  text-align: center;
-  color: #409eff;
-}
-
-.loading-icon {
-  font-size: 40px;
-  margin-bottom: 12px;
-  animation: spin 1.5s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error-container {
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* 公司信息对话框样式 */
-.company-info-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.company-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.company-logo-name {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.company-logo {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 2px solid #f0f2f5;
-}
-
-.company-name-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-}
-
-.company-name-wrapper h3 {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
-  color: #303133;
-}
-
-.company-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.company-info-section {
-  margin-bottom: 24px;
-}
-
-.company-info-section h4 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px 32px;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-}
-
-.info-label {
-  font-size: 14px;
-  color: #606266;
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.info-value {
-  font-size: 14px;
-  color: #303133;
-  flex: 1;
-  font-weight: 500;
-}
-
-.company-description-section {
-  margin-top: 24px;
-}
-
-.company-description-section h4 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
-}
-
-.description-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #606266;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-}
-
-.empty-description {
-  padding: 40px 20px;
-  text-align: center;
-  color: #909399;
-  font-style: italic;
-}
-
-/* 求职者信息对话框样式 */
+/* ==================== 对话框详情样式优化 ==================== */
 .job-seeker-info-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding-right: 8px;
+  padding: 0 20px;
 }
 
 .job-seeker-header {
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .job-seeker-avatar-name {
@@ -1248,20 +1178,14 @@ onMounted(() => {
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #f0f2f5;
-}
-
-.job-seeker-name-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
+  border: 2px solid #f0f9f8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .job-seeker-name-wrapper h3 {
+  margin: 0 0 12px 0;
   font-size: 24px;
-  font-weight: 600;
-  margin: 0;
+  font-weight: 700;
   color: #303133;
 }
 
@@ -1271,103 +1195,114 @@ onMounted(() => {
   gap: 8px;
 }
 
-.job-seeker-info-section {
-  margin-bottom: 24px;
+.job-seeker-meta :deep(.el-tag) {
+  border-radius: 6px;
+  padding: 0 10px;
+  font-weight: 500;
 }
 
-.job-seeker-introduction-section {
-  margin-bottom: 24px;
+.job-seeker-info-section,
+.job-seeker-introduction-section,
+.job-seeker-skills-section,
+.job-seeker-resume-section {
+  margin-bottom: 28px;
 }
 
-.job-seeker-introduction-section h4 {
+.job-seeker-info-section h4,
+.job-seeker-introduction-section h4,
+.job-seeker-skills-section h4,
+.job-seeker-resume-section h4 {
+  margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: 600;
-  margin: 0 0 16px 0;
   color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
+  display: flex;
+  align-items: center;
+}
+
+.job-seeker-info-section h4::before {
+  content: '';
   display: inline-block;
+  width: 4px;
+  height: 18px;
+  background-color: #00beaa;
+  margin-right: 10px;
+  border-radius: 2px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  background-color: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #303133;
+  font-weight: 500;
 }
 
 .introduction-content {
-  font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.8;
   color: #606266;
   white-space: pre-wrap;
-  word-wrap: break-word;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-}
-
-.job-seeker-skills-section {
-  margin-bottom: 24px;
-}
-
-.job-seeker-skills-section h4 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
+  background-color: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
 }
 
 .skills-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .skill-tag {
-  cursor: default;
-  user-select: none;
-}
-
-.skill-tag:hover {
-  opacity: 0.9;
-}
-
-.job-seeker-resume-section {
-  margin-top: 24px;
-}
-
-.job-seeker-resume-section h4 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-weight: 500;
+  background-color: #f0f9f8;
+  border-color: #e6f6f4;
+  color: #00beaa;
 }
 
 .resume-action {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  background-color: #f0f9f8;
+  padding: 24px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px dashed #00beaa;
 }
 
 .resume-tip {
-  font-size: 12px;
+  margin-top: 12px;
+  font-size: 13px;
   color: #909399;
-  margin: 0;
-  font-style: italic;
 }
 
-/* 职位信息对话框样式 */
+/* 职位详情样式优化 */
 .position-info-content {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding-right: 8px;
+  padding: 0 10px;
 }
 
 .position-header {
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .position-title-salary {
@@ -1375,135 +1310,60 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .position-title-salary h3 {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
   color: #303133;
-  flex: 1;
 }
 
 .position-salary {
   font-size: 24px;
   font-weight: 700;
   color: #f56c6c;
-  white-space: nowrap;
 }
 
 .position-meta {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.position-description-section {
-  margin-bottom: 24px;
-}
-
-.position-description-section h4 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
-}
-
+.position-description-section,
 .position-requirement-section {
   margin-bottom: 24px;
 }
 
+.position-description-section h4,
 .position-requirement-section h4 {
-  font-size: 18px;
+  margin: 0 0 12px 0;
+  font-size: 16px;
   font-weight: 600;
-  margin: 0 0 16px 0;
   color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  display: inline-block;
 }
 
+.description-content,
 .requirement-content {
-  font-size: 14px;
   line-height: 1.6;
   color: #606266;
   white-space: pre-wrap;
-  word-wrap: break-word;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
 }
 
-.empty-content {
-  padding: 40px 20px;
-  text-align: center;
-  color: #909399;
-  font-style: italic;
-}
-
-/* 滚动条优化 */
-.company-info-content::-webkit-scrollbar,
-.job-seeker-info-content::-webkit-scrollbar,
-.position-info-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.company-info-content::-webkit-scrollbar-track,
-.job-seeker-info-content::-webkit-scrollbar-track,
-.position-info-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.company-info-content::-webkit-scrollbar-thumb,
-.job-seeker-info-content::-webkit-scrollbar-thumb,
-.position-info-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.company-info-content::-webkit-scrollbar-thumb:hover,
-.job-seeker-info-content::-webkit-scrollbar-thumb:hover,
-.position-info-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* 响应式设计 */
+/* 响应式适配 */
 @media (max-width: 768px) {
-  .boss-applications-container {
-    padding: 12px;
+  .stats-row {
+    flex-wrap: wrap;
+    gap: 20px;
   }
   
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+  .stats-row :deep(.el-statistic:not(:last-child)::after) {
+    display: none;
   }
   
-  .filter-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filter-group {
-    justify-content: space-between;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .position-meta {
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-start;
+  .stats-row :deep(.el-statistic) {
+    margin-right: 0;
+    width: calc(50% - 10px);
   }
 }
 </style>

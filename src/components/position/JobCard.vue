@@ -69,15 +69,23 @@
       <el-button type="primary" @click.stop="handleViewDetail" size="small">
         查看详情
       </el-button>
+      <el-button @click.stop="handleFavorite" size="small">
+        <el-icon>
+          <Star v-if="isFavorite" style="color: #fadb14" />
+          <Star v-else />
+        </el-icon>
+        {{ isFavorite ? '已收藏' : '收藏' }}
+      </el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Location, Briefcase, School, Clock } from '@element-plus/icons-vue'
-import { EDUCATION_MAP } from '@/types'
-import type { PositionInfo, EducationLevel } from '@/types'
+import { computed, ref, onMounted } from 'vue'
+import { Location, Briefcase, School, Clock, Star } from '@element-plus/icons-vue'
+import { EDUCATION_MAP } from '../../types'
+import type { PositionInfo, EducationLevel } from '../../types'
+import { addFavorite, removeFavorite, checkFavorite } from '../../utils/api'
 
 interface Props {
   job: PositionInfo
@@ -88,6 +96,41 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   click: []
 }>()
+
+// 收藏状态
+const isFavorite = ref(false)
+
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await checkFavorite(1, props.job.id)
+    isFavorite.value = response.isFavorite
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
+
+// 处理收藏操作
+const handleFavorite = async () => {
+  try {
+    if (isFavorite.value) {
+      // 取消收藏
+      await removeFavorite(1, props.job.id)
+      isFavorite.value = false
+    } else {
+      // 添加收藏
+      await addFavorite(1, props.job.id)
+      isFavorite.value = true
+    }
+  } catch (error) {
+    console.error('处理收藏操作失败:', error)
+  }
+}
+
+// 初始化时检查收藏状态
+onMounted(() => {
+  checkFavoriteStatus()
+})
 
 // 解析标签列表
 const tags = computed(() => {

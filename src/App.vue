@@ -10,7 +10,26 @@
 </template>
 
 <script setup lang="ts">
-// 根组件，不需要额外的逻辑
+import { onMounted } from 'vue';
+import { useUserStore } from './stores/userStore';
+
+// 初始化应用时检查认证状态
+onMounted(() => {
+  const userStore = useUserStore();
+  
+  // 只在应用启动时检查一次是否有不一致的状态
+  const hasTokenInStorage = !!localStorage.getItem('token');
+  const hasUserInfoInStorage = !!localStorage.getItem('userInfo');
+  
+  // 如果localStorage中有token但没有用户信息（只检查一次，不重复清理）
+  if (hasTokenInStorage && !hasUserInfoInStorage) {
+    console.log('启动时检测到不一致的认证状态：有token但没有用户信息，清理状态');
+    userStore.clearUserState();
+  }
+  
+  // 不再使用定时器重复检查，避免干扰正常的登录流程
+  // token的有效性由后端API验证（401响应时自动处理）
+});
 </script>
 
 <style>

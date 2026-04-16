@@ -90,20 +90,70 @@
             <p>可视化数据展示，洞察招聘趋势</p>
           </el-card>
         </div>
+
+        <!-- 推荐职位（只对求职者显示） -->
+        <div v-if="userStore.userInfo?.role === 1 && (latestPositions.length > 0 || hotPositions.length > 0)" class="recommendation-section">
+          <!-- 热门职位 -->
+          <div v-if="hotPositions.length > 0" class="hot-positions-section">
+            <div class="section-header">
+              <h3 class="section-title">
+                <el-icon><TrendCharts /></el-icon>
+                热门职位
+              </h3>
+              <span class="section-subtitle">高薪资、高匹配度的优质职位</span>
+            </div>
+            <div class="hot-positions-grid">
+              <JobCard 
+                v-for="position in hotPositions.slice(0, 4)" 
+                :key="position.id" 
+                :job="position"
+                @click="viewHotPosition(position)"
+              />
+            </div>
+          </div>
+
+          <!-- 最新职位 -->
+          <div v-if="latestPositions.length > 0" class="latest-positions-section">
+            <div class="section-header">
+              <h3 class="section-title">
+                <el-icon><Clock /></el-icon>
+                最新职位
+              </h3>
+              <span class="section-subtitle">刚刚发布的优质机会</span>
+            </div>
+            <div class="latest-positions-grid">
+              <JobCard 
+                v-for="position in latestPositions.slice(0, 6)" 
+                :key="position.id" 
+                :job="position"
+                @click="viewLatestPosition(position)"
+              />
+            </div>
+            
+            <div class="more-positions-link">
+              <el-button type="primary" link @click="goToJobDiscovery">
+                <span>查看更多职位</span>
+                <el-icon><ArrowRight /></el-icon>
+              </el-button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useUserStore } from '@/stores/userStore';
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
+import { useUserStore } from '../stores/userStore';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Document, TrendCharts, ChatLineRound, DataAnalysis, Edit, WarningFilled, CircleCheckFilled, Position, Search } from '@element-plus/icons-vue';
-import AppLayout from '@/components/AppLayout.vue';
-import { getJobSeekerInfo, getCompanyInfo } from '@/utils/api';
-import type { JobSeekerInfo, CompanyInfo } from '@/types';
+import { Document, TrendCharts, ChatLineRound, DataAnalysis, Edit, Position, Search, Clock, ArrowRight, Location } from '@element-plus/icons-vue';
+// 动态导入组件
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'));
+const JobCard = defineAsyncComponent(() => import('../components/position/JobCard.vue'));
+import { getJobSeekerInfo, getCompanyInfo, getLatestPositions, getHotPositions } from '../utils/api';
+import type { JobSeekerInfo, CompanyInfo, PositionInfo } from '../types';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -115,6 +165,9 @@ const loading = ref(true);
 const jobSeekerInfo = ref<JobSeekerInfo | null>(null);
 // 企业信息
 const companyInfo = ref<CompanyInfo | null>(null);
+// 推荐职位信息
+const latestPositions = ref<PositionInfo[]>([]);
+const hotPositions = ref<PositionInfo[]>([]);
 
 /**
  * 判断个人信息是否已填写（通过检查关键字段）
@@ -157,6 +210,12 @@ const loadUserInfo = async () => {
     if (userStore.userInfo.role === 1) {
       // 求职者
       jobSeekerInfo.value = await getJobSeekerInfo();
+      
+      // 同时加载推荐职位
+      await Promise.all([
+        loadLatestPositions(),
+        loadHotPositions()
+      ]);
     } else if (userStore.userInfo.role === 2) {
       // 企业
       companyInfo.value = await getCompanyInfo();
@@ -166,6 +225,32 @@ const loadUserInfo = async () => {
     // 如果获取失败，保持 null，表示信息未完善
   } finally {
     loading.value = false;
+  }
+};
+
+/**
+ * 加载最新职位
+ */
+const loadLatestPositions = async () => {
+  try {
+    const positions = await getLatestPositions(10);
+    latestPositions.value = positions || [];
+  } catch (error) {
+    console.error('加载最新职位失败:', error);
+    latestPositions.value = [];
+  }
+};
+
+/**
+ * 加载热门职位
+ */
+const loadHotPositions = async () => {
+  try {
+    const positions = await getHotPositions(10);
+    hotPositions.value = positions || [];
+  } catch (error) {
+    console.error('加载热门职位失败:', error);
+    hotPositions.value = [];
   }
 };
 
@@ -192,8 +277,72 @@ const goToBossPosition = () => {
  * 跳转到求职者职位发现页面
  */
 const goToJobDiscovery = () => {
-  // 跳转到职位发现页面
   router.push('/discover');
+};
+
+/**
+ * 查看热门职位详情
+ */
+const viewHotPosition = (position: PositionInfo) => {
+  // 跳转到职位发现页面并传入职位ID
+  router.push({ path: '/discover', query: { positionId: position.id } });
+};
+
+/**
+ * 查看最新职位详情
+ */
+const viewLatestPosition = (position: PositionInfo) => {
+  // 跳转到职位发现页面并传入职位ID
+  router.push({ path: '/discover', query: { positionId: position.id } });
+};
+
+/**
+ * 格式化薪资
+ */
+const formatSalary = (min: number, max: number): string => {
+  return `${min}K - ${max}K/月`;
+};
+
+/**
+ * 格式化学历
+ */
+const formatEducation = (level: number): string => {
+  const educationMap: Record<number, string> = {
+    1: '高中及以下',
+    2: '大专',
+    3: '本科',
+    4: '硕士',
+    5: '博士'
+  };
+  return educationMap[level] || '不限';
+};
+
+/**
+ * 格式化发布时间
+ */
+const formatPublishTime = (dateString: string): string => {
+  if (!dateString) return '未知时间';
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffHours < 1) {
+      return '刚刚';
+    } else if (diffHours < 24) {
+      return `${diffHours}小时前`;
+    } else {
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) {
+        return `${diffDays}天前`;
+      } else {
+        return date.getMonth() + 1 + '月' + date.getDate() + '日';
+      }
+    }
+  } catch (error) {
+    return dateString;
+  }
 };
 
 /**
@@ -260,194 +409,211 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== BOSS直聘风格首页样式 ==================== */
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
 }
 
 /* ==================== 页面头部 ==================== */
 .page-header {
   margin-bottom: 24px;
-  background: white;
-  padding: 20px 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 .page-header h2 {
   font-size: 24px;
-  color: #222;
-  margin: 0 0 12px 0;
-  font-weight: 600;
+  font-weight: 700;
+  color: #303133;
+  margin: 0;
 }
 
 .user-status {
+  font-size: 14px;
+  color: #909399;
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  color: #666;
-  background: #f5f7fa;
-  padding: 10px 16px;
-  border-radius: 8px;
-  width: fit-content;
 }
 
-.user-status .status-label {
-  color: #999;
-  font-weight: 500;
-}
-
-.user-status .status-value {
-  color: #222;
+.status-value {
+  color: #409eff;
   font-weight: 600;
+  margin-left: 4px;
 }
 
-.user-status .status-separator {
-  color: #e0e0e0;
-  margin: 0 4px;
+.status-separator {
+  margin: 0 12px;
+  color: #dcdfe6;
 }
 
 /* ==================== 欢迎卡片 ==================== */
 .welcome-card {
-  background: linear-gradient(135deg, #00beaa 0%, #00c9b7 100%);
-  border-radius: 12px;
   margin-bottom: 24px;
-  border: none !important;
-  box-shadow: 0 4px 16px rgba(0, 190, 170, 0.25) !important;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.welcome-card :deep(.el-card__body) {
-  padding: 0;
-}
-
-/* ==================== 卡片内容 ==================== */
 .welcome-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 32px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
-  border-radius: 12px;
+  padding: 10px;
 }
 
 .welcome-left h2 {
-  font-size: 24px;
-  color: #222;
-  margin: 0 0 8px 0;
-  font-weight: 600;
+  font-size: 22px;
+  margin-bottom: 8px;
+  color: #303133;
 }
 
 .welcome-left p {
-  font-size: 14px;
-  color: #666;
+  font-size: 15px;
+  color: #606266;
   margin: 0;
 }
 
-.welcome-right .el-button {
-  background: linear-gradient(135deg, #00beaa, #00c9b7);
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 190, 170, 0.3);
-  font-weight: 500;
-}
-
-.welcome-right .el-button:hover {
-  background: linear-gradient(135deg, #00a896, #00beaa);
-  box-shadow: 0 6px 16px rgba(0, 190, 170, 0.4);
-}
-
-/* ==================== 功能卡片网格 ==================== */
+/* ==================== 功能网格 ==================== */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px;
+  margin-bottom: 32px;
 }
 
 .feature-card {
   text-align: center;
-  padding: 32px 24px;
   border-radius: 12px;
-  transition: all 0.3s ease;
-  background: white;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #00beaa, #00c9b7);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s;
+  border: 1px solid #ebeef5;
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 190, 170, 0.15);
-  border-color: #e6f9f6;
-}
-
-.feature-card:hover::before {
-  opacity: 1;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .feature-icon {
   margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.feature-icon::before {
-  content: '';
-  position: absolute;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, rgba(0, 190, 170, 0.08), rgba(0, 201, 183, 0.04));
-  border-radius: 50%;
-  z-index: 0;
-}
-
-.feature-icon .el-icon {
-  position: relative;
-  z-index: 1;
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: #f0f9f8;
 }
 
 .feature-card h3 {
   font-size: 18px;
-  color: #222;
-  margin: 0 0 8px 0;
-  font-weight: 600;
+  margin-bottom: 10px;
+  color: #303133;
 }
 
 .feature-card p {
   font-size: 14px;
-  color: #666;
-  margin: 0;
+  color: #909399;
   line-height: 1.5;
 }
 
-/* ==================== 响应式设计 ==================== */
-@media (max-width: 768px) {
-  .welcome-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 20px;
-  }
+/* ==================== 推荐职位板块 ==================== */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
 
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #909399;
+}
+
+/* 职位网格布局 */
+.hot-positions-grid, .latest-positions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.position-card {
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.position-card:hover {
+  border-color: #409eff;
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.1);
+}
+
+.position-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.position-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
+}
+
+.position-salary {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f56c6c;
+}
+
+.company-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.position-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #909399;
+}
+
+.position-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.position-meta {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 12px;
+  border-top: 1px solid #f2f6fc;
+  padding-top: 12px;
+}
+
+.more-positions-link {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 40px;
+}
+
+.loading-wrapper {
+  padding: 40px 0;
 }
 </style>

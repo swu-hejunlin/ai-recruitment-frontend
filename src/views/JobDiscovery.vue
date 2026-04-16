@@ -33,44 +33,12 @@
       </div>
 
       <div v-else class="jobs-list">
-        <div class="job-card" v-for="position in positionList" :key="position.id">
-          <div class="job-header">
-            <h3>{{ position.title }}</h3>
-            <div class="salary">
-              {{ position.salaryMin ? `${position.salaryMin}k` : '面议' }}
-              {{ position.salaryMax ? `- ${position.salaryMax}k` : '' }}
-            </div>
-          </div>
-          
-          <div class="job-info">
-            <div class="info-row">
-              <el-icon><Location /></el-icon>
-              <span>{{ position.city || '工作城市' }}</span>
-            </div>
-            <div class="info-row">
-              <el-icon><OfficeBuilding /></el-icon>
-              <span>{{ position.companyName || '某公司' }}</span>
-            </div>
-            <div class="info-row">
-              <el-icon><Clock /></el-icon>
-              <span>{{ position.category || '职位类别' }}</span>
-            </div>
-          </div>
-
-          <div class="job-actions">
-            <el-button type="primary" size="small" @click="viewJobDetail(position)">
-              查看详情
-            </el-button>
-            <el-button 
-              type="success" 
-              size="small" 
-              @click="applyJob(position)"
-              :disabled="position.status !== 1"
-            >
-              {{ position.status === 1 ? '立即投递' : '已关闭' }}
-            </el-button>
-          </div>
-        </div>
+        <JobCard 
+          v-for="position in positionList" 
+          :key="position.id" 
+          :job="position"
+          @click="viewJobDetail(position)"
+        />
       </div>
 
       <div v-if="positionList.length > 0" class="pagination">
@@ -104,8 +72,17 @@
             <!-- 公司信息 -->
             <div class="detail-company-info">
               <div class="company-logo-name">
-                <img v-if="selectedPosition.companyLogo" :src="selectedPosition.companyLogo" alt="公司Logo" class="company-logo" />
-                <h3>{{ selectedPosition.companyName || '未指定公司' }}</h3>
+                <img 
+                  v-if="selectedPosition.companyLogo" 
+                  :src="selectedPosition.companyLogo" 
+                  alt="公司Logo" 
+                  class="company-logo" 
+                  @error="handleDetailLogoError"
+                  :data-company-name="selectedPosition.companyName || ''"
+                />
+                <h3 @click="viewCompanyDetail(selectedPosition.companyId)">
+                  {{ selectedPosition.companyName || '未指定公司' }}
+                </h3>
               </div>
             </div>
           </div>
@@ -205,15 +182,21 @@
           </span>
         </template>
       </el-dialog>
+
+      
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Loading, Location, OfficeBuilding, Clock } from '@element-plus/icons-vue'
-import AppLayout from '@/components/AppLayout.vue'
+import { Search, Loading, Location, Clock } from '@element-plus/icons-vue'
+import { defineAsyncComponent } from 'vue';
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'));
+const JobCard = defineAsyncComponent(() => import('../components/position/JobCard.vue'));
+import { useUserStore } from '../stores/userStore'
 import { getPositionList, getPositionDetail, applyPosition } from '@/utils/api'
 import type { PositionInfo, PositionDetail, EducationLevel } from '@/types'
 
@@ -235,6 +218,12 @@ const totalPositions = ref(0)
 const detailDialogVisible = ref(false)
 const selectedPosition = ref<PositionDetail | null>(null)
 const loadingDetail = ref(false)
+
+// 路由
+const router = useRouter()
+const route = useRoute()
+
+// 公司详情相关 - 现在直接跳转到公司详情页，不再使用对话框
 
 // 学历映射
 const educationMap: Record<EducationLevel, string> = {
@@ -311,6 +300,10 @@ const applyJob = async (position: PositionInfo) => {
     await applyPosition({ positionId: position.id })
     
     ElMessage.success(`已成功投递"${position.title}"职位`)
+
+    // 立即刷新角标计数
+    const userStore = useUserStore()
+    userStore.refreshCounts()
     
     // 如果是在详情对话框中点击的投递，关闭对话框
     if (detailDialogVisible.value) {
@@ -366,6 +359,56 @@ const formatDate = (dateString?: string): string => {
   }
 }
 
+// 工具方法：处理公司Logo加载错误（职位卡片）
+const handleLogoError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent) {
+    const companyName = (img.dataset.companyName || '').trim()
+    parent.innerHTML = `<div class="company-logo-placeholder">${getCompanyInitial(companyName)}</div>`
+  }
+}
+
+
+
+// 工具方法：处理公司Logo加载错误（职位详情对话框）
+const handleDetailLogoError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+  const parent = img.parentElement
+  if (parent) {
+    const companyName = (img.dataset.companyName || '').trim()
+    // 为详情对话框创建更大的占位符
+    parent.innerHTML = `
+      <div class="company-logo-placeholder-detail">
+        ${getCompanyInitial(companyName)}
+      </div>
+    `
+  }
+}
+
+// 工具方法：获取公司名称首字母
+const getCompanyInitial = (companyName?: string): string => {
+  if (!companyName || companyName.trim().length === 0) return '公'
+  // 提取中文字符或英文字符的首字符
+  const firstChar = companyName.trim().charAt(0)
+  return firstChar.toUpperCase()
+}
+
+// 查看公司详情
+const viewCompanyDetail = (companyId?: number) => {
+  if (!companyId) {
+    ElMessage.warning('暂无法查看该公司详情')
+    return
+  }
+  
+  // 直接跳转到公司详情页面
+  router.push({
+    path: `/company/${companyId}`
+  })
+}
+
 // 工具方法：解析标签JSON
 const parseTags = (tagsString?: string): string[] => {
   if (!tagsString) return []
@@ -378,8 +421,37 @@ const parseTags = (tagsString?: string): string[] => {
   }
 }
 
-onMounted(() => {
-  fetchPositions()
+onMounted(async () => {
+  // 先获取职位列表
+  await fetchPositions()
+  
+  // 检查是否有职位ID参数，如果有则打开详情
+  const positionId = route.query.positionId
+  if (positionId) {
+    try {
+      const id = parseInt(positionId as string)
+      // 查找对应的职位信息
+      const position = positionList.value.find(p => p.id === id)
+      if (position) {
+        await viewJobDetail(position)
+      } else {
+        // 如果在列表中找不到，直接通过API获取详情
+        try {
+          loadingDetail.value = true
+          detailDialogVisible.value = true
+          const response = await getPositionDetail(id)
+          selectedPosition.value = response
+        } catch (error) {
+          console.error('获取职位详情失败:', error)
+          ElMessage.error('获取职位详情失败')
+        } finally {
+          loadingDetail.value = false
+        }
+      }
+    } catch (error) {
+      console.error('处理职位ID参数失败:', error)
+    }
+  }
 })
 </script>
 
@@ -459,6 +531,61 @@ h1 {
   border-color: #409eff;
   box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
   transform: translateY(-2px);
+}
+
+/* 公司Logo和名称样式 */
+.company-row {
+  margin-bottom: 10px;
+}
+
+.company-logo-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.company-logo-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #ebeef5;
+}
+
+.company-logo-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.company-name-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #409eff;
+}
+
+.company-name-text.clickable {
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.company-name-text.clickable:hover {
+  color: #1d68ce;
+  text-decoration: underline;
+}
+
+.company-name-text.clickable:active {
+  color: #0d4ea3;
+  transform: translateY(1px);
 }
 
 .job-header {
@@ -560,11 +687,41 @@ h1 {
   object-fit: cover;
 }
 
+.company-logo-placeholder-detail {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 40px;
+}
+
 .detail-company-info h3 {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
   color: #409eff;
+}
+
+.detail-company-info h3 {
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.detail-company-info h3:hover {
+  color: #1d68ce;
+  text-decoration: underline;
+}
+
+.detail-company-info h3:active {
+  color: #0d4ea3;
+  transform: translateY(1px);
 }
 
 .detail-basic-info {
@@ -713,4 +870,5 @@ h1 {
 .job-detail-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
 </style>

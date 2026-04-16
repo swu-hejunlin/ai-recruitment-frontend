@@ -39,6 +39,13 @@
         </el-table-column>
         <el-table-column prop="category" label="职位类别" width="120" />
         <el-table-column prop="city" label="工作城市" width="100" />
+        <el-table-column label="公司名称" width="180">
+          <template #default="{ row }">
+            <div class="company-info">
+              <span>{{ row.companyName || `公司-${row.companyId}` }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="薪资范围" width="150">
           <template #default="{ row }">
             <span class="salary-text">{{ formatSalary(row.salaryMin, row.salaryMax) }}</span>
@@ -82,8 +89,8 @@
       <!-- 分页组件 -->
       <div class="pagination-container">
         <el-pagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.size"
+          :current-page="pagination.current"
+          :page-size="pagination.size"
           :total="pagination.total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
@@ -135,10 +142,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import PositionForm from './PositionForm.vue'
-import PositionDetailView from './PositionDetailView.vue'
-import { getBossPositionList, deletePosition, closePosition, openPosition } from '@/utils/api'
-import type { PositionInfo } from '@/types'
+// 动态导入组件
+import { defineAsyncComponent } from 'vue'
+const PositionForm = defineAsyncComponent(() => import('./PositionForm.vue'))
+const PositionDetailView = defineAsyncComponent(() => import('./PositionDetailView.vue'))
+import { getBossPositionList, deletePosition, closePosition, openPosition } from '../../utils/api'
+import type { PositionInfo } from '../../types'
 
 // 表格数据
 interface TableRow extends PositionInfo {
@@ -177,7 +186,7 @@ const formatDate = (dateStr: string): string => {
 }
 
 // 处理职位状态切换
-const handleStatusChange = async (row: TableRow) => {
+const handleStatusChange = async (row: any) => {
   try {
     row.switchLoading = true
     const newStatus = row.status
@@ -280,6 +289,13 @@ const fetchPositionList = async () => {
   try {
     tableLoading.value = true
     const response = await getBossPositionList(pagination.current, pagination.size)
+    console.log('Boss职位列表API响应数据:', response.records.map(item => ({
+      id: item.id,
+      title: item.title,
+      companyId: item.companyId,
+      companyName: item.companyName,
+      city: item.city
+    })))
     tableData.value = response.records.map(item => ({
       ...item,
       switchLoading: false

@@ -147,9 +147,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Location, OfficeBuilding } from '@element-plus/icons-vue'
-import { closePosition, openPosition, deletePosition } from '@/utils/api'
-import { POSITION_STATUS_MAP, EDUCATION_MAP } from '@/types'
-import type { PositionInfo, EducationLevel } from '@/types'
+import { closePosition, openPosition, deletePosition } from '../../utils/api'
+import { POSITION_STATUS_MAP, EDUCATION_MAP } from '../../types'
+import type { PositionInfo, EducationLevel } from '../../types'
 
 interface Props {
   position: PositionInfo

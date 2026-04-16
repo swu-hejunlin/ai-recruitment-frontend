@@ -118,10 +118,10 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { Iphone, Message, WarningFilled } from '@element-plus/icons-vue';
-import { useUserStore } from '@/stores/userStore';
-import type { LoginForm as LoginFormType, LoginResponse, Role, UserInfo } from '@/types';
-import { ROLE_MAP } from '@/types';
-import request from '@/utils/request';
+import { useUserStore } from '../stores/userStore';
+import type { LoginForm as LoginFormType, LoginRequest, LoginResponse, Role, UserInfo } from '../types';
+import { ROLE_MAP } from '../types';
+import request from '../utils/request';
 
 // ==================== 路由和状态管理 ====================
 const router = useRouter();
@@ -352,77 +352,79 @@ const handleLogin = async () => {
 
     // 检查是否正在进行角色切换
     if (window.isSwitchingRole) {
-      // 调用身份切换接口
-      const res = await request.post('/api/user/switch-role', {
+      console.log('[登录调试] 检测到正在进行角色切换');
+      
+      // 调用userStore.switchRole方法进行角色切换，确保状态一致性
+      const switchData: LoginRequest = {
         phone: loginForm.phone,
         code: loginForm.code,
         role: loginForm.role
-      }) as unknown as LoginResponse;
-
-      console.log('身份切换响应数据:', res);
-
-      // 清除切换标记
-      window.isSwitchingRole = false;
-
-      // 保存用户信息
-      const userInfo: UserInfo = {
-        userId: res.userId,
-        phone: loginForm.phone,
-        role: res.role
       };
+      
+      console.log('[登录调试] 调用userStore.switchRole，参数:', switchData);
+      
+      try {
+        // 调用store的切换角色方法
+        const userInfo = await userStore.switchRole(switchData);
+        
+        console.log('[登录调试] 角色切换成功，userInfo:', userInfo);
+        console.log('[登录调试] 当前store状态:', {
+          isLogin: userStore.isLogin,
+          token: userStore.token,
+          userInfo: userStore.userInfo
+        });
+        
+        // 清除切换标记
+        window.isSwitchingRole = false;
+        
+        ElMessage.success('身份切换成功');
 
-      userStore.token = res.token || '';
-      userStore.userInfo = userInfo;
-      localStorage.setItem('token', res.token || '');
-      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        // 跳转到首页
+        console.log('[登录调试] 准备跳转到首页');
+        setTimeout(() => {
+          router.push('/');
+        }, 500);
+        return;
+      } catch (error) {
+        console.error('[登录调试] 角色切换失败:', error);
+        // 错误已在 request.ts 中统一处理
+        return;
+      }
+    }
 
-      ElMessage.success('身份切换成功');
+    console.log('开始登录流程...');
+    
+    // 使用userStore.login方法进行登录，确保状态一致性
+    const loginData: LoginRequest = {
+      phone: loginForm.phone,
+      code: loginForm.code,
+      role: loginForm.role
+    };
+    
+    try {
+      // 调用store的登录方法
+      await userStore.login(loginData);
+      
+      console.log('登录成功!');
+      ElMessage.success('登录成功');
 
       // 跳转到首页
       setTimeout(() => {
         router.push('/');
       }, 500);
-      return;
+    } catch (error: any) {
+      // 检查是否是角色切换错误
+      if (error.needSwitchRole) {
+        console.log('检测到角色冲突，弹出对话框');
+        // 角色冲突，弹出切换确认对话框
+        loginResponseData.value = error.loginResponse;
+        currentRole.value = error.currentRole as Role;
+        showRoleSwitchDialog.value = true;
+      } else {
+        // 其他错误已在 request.ts 中统一处理
+        console.error('登录失败:', error);
+      }
     }
-
-    // 正常登录流程
-    const res = await request.post('/api/user/login', {
-      phone: loginForm.phone,
-      code: loginForm.code,
-      role: loginForm.role
-    }) as unknown as LoginResponse;
-
-    console.log('登录响应数据:', res);
-
-    // 检查是否需要切换角色
-    if (res.needSwitchRole) {
-      console.log('检测到角色冲突，弹出对话框');
-      // 角色冲突，弹出切换确认对话框
-      loginResponseData.value = res;
-      currentRole.value = res.currentRole as Role;
-      showRoleSwitchDialog.value = true;
-      return;
-    }
-
-    // 正常登录流程
-    // 保存用户信息
-    const userInfo: UserInfo = {
-      userId: res.userId,
-      phone: loginForm.phone,
-      role: res.role
-    };
-
-    userStore.token = res.token || '';
-    userStore.userInfo = userInfo;
-    localStorage.setItem('token', res.token || '');
-    localStorage.setItem('userInfo', JSON.stringify(userInfo));
-
-    ElMessage.success('登录成功');
-
-    // 跳转到首页
-    setTimeout(() => {
-      router.push('/');
-    }, 500);
   } catch (error) {
     console.error('登录失败:', error);
     // 错误已在 request.ts 中统一处理
@@ -439,44 +441,92 @@ const handleLogin = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景装饰 */
+.login-container::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 190, 170, 0.1) 0%, rgba(0, 190, 170, 0) 70%);
+  top: -200px;
+  right: -200px;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.login-container::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(64, 158, 255, 0.1) 0%, rgba(64, 158, 255, 0) 70%);
+  bottom: -100px;
+  left: -100px;
+  border-radius: 50%;
+  z-index: 0;
 }
 
 /* ==================== 登录框 ==================== */
 .login-box {
-  width: 400px;
-  padding: 40px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: 420px;
+  padding: 48px 40px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  z-index: 1;
 }
 
 /* ==================== 页面标题 ==================== */
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .login-header h1 {
-  font-size: 28px;
-  color: #333;
-  margin-bottom: 10px;
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #00beaa 0%, #409eff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
 }
 
 .login-header p {
-  font-size: 14px;
-  color: #999;
+  font-size: 15px;
+  color: #606266;
+  letter-spacing: 0.5px;
 }
 
 /* ==================== 登录表单 ==================== */
-.login-form {
-  margin-top: 20px;
+.login-form :deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.login-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 0 0 1px #dcdfe6 inset;
+  transition: all 0.3s;
+}
+
+.login-form :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #00beaa inset !important;
 }
 
 /* 验证码输入框组合 */
 .code-input-wrapper {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
@@ -484,59 +534,134 @@ const handleLogin = async () => {
   flex: 1;
 }
 
+.code-input-wrapper :deep(.el-button) {
+  height: 42px;
+  border-radius: 10px;
+  padding: 0 20px;
+  font-weight: 600;
+  background-color: #f0f9f8;
+  border-color: #00beaa;
+  color: #00beaa;
+}
+
+.code-input-wrapper :deep(.el-button:hover) {
+  background-color: #00beaa;
+  color: white;
+}
+
+.code-input-wrapper :deep(.el-button.is-disabled) {
+  background-color: #f5f7fa;
+  border-color: #e4e7ed;
+  color: #c0c4cc;
+}
+
+/* 角色选择器优化 */
+.login-form :deep(.el-radio-group) {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+}
+
+.login-form :deep(.el-radio) {
+  flex: 1;
+  margin-right: 0;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid #dcdfe6;
+  padding: 0 16px;
+  display: flex;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.login-form :deep(.el-radio.is-checked) {
+  border-color: #00beaa;
+  background-color: #f0f9f8;
+}
+
+.login-form :deep(.el-radio__input) {
+  display: none;
+}
+
+.login-form :deep(.el-radio__label) {
+  padding-left: 0;
+  font-weight: 600;
+}
+
 /* ==================== 登录按钮 ==================== */
 .login-button {
   width: 100%;
-  height: 44px;
-  font-size: 16px;
-  margin-top: 10px;
+  height: 50px;
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00beaa 0%, #00a896 100%);
+  border: none;
+  box-shadow: 0 6px 16px rgba(0, 190, 170, 0.25);
+  transition: all 0.3s;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 190, 170, 0.35);
+  background: linear-gradient(135deg, #00d2bc 0%, #00beaa 100%);
+}
+
+.login-button:active {
+  transform: translateY(0);
 }
 
 /* ==================== 页脚提示 ==================== */
 .login-footer {
-  margin-top: 20px;
+  margin-top: 32px;
   text-align: center;
 }
 
 .login-footer p {
-  font-size: 12px;
-  color: #999;
+  font-size: 13px;
+  color: #909399;
 }
 
 /* ==================== 角色切换对话框 ==================== */
 .role-switch-content {
   text-align: center;
-  padding: 20px 0;
+  padding: 24px 0;
 }
 
 .warning-icon {
   color: #e6a23c;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .warning-text {
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 15px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+  margin-bottom: 16px;
 }
 
 .role-switch-content p {
-  font-size: 14px;
-  color: #666;
-  margin: 8px 0;
+  font-size: 15px;
+  color: #606266;
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.role-switch-content strong {
+  color: #303133;
 }
 
 .role-switch-content .question {
-  font-size: 15px;
-  font-weight: 500;
-  color: #409eff;
-  margin-top: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #00beaa;
+  margin-top: 20px;
 }
 
 .role-switch-content .note {
-  font-size: 12px;
-  color: #999;
-  margin-top: 15px;
+  font-size: 13px;
+  color: #909399;
+  margin-top: 20px;
 }
 </style>

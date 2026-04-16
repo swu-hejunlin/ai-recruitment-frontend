@@ -8,8 +8,10 @@
 </template>
 
 <script setup lang="ts">
-import AppLayout from '@/components/AppLayout.vue'
-import BossPositionList from '@/components/position/BossPositionList.vue'
+// 动态导入组件
+import { defineAsyncComponent } from 'vue'
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'))
+const BossPositionList = defineAsyncComponent(() => import('../components/position/BossPositionList.vue'))
 </script>
 
 <style scoped lang="scss">

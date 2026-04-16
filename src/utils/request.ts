@@ -42,24 +42,20 @@ request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // 从 localStorage 获取 token
     const token = localStorage.getItem('token');
-
+    
     // 如果存在 token，添加到请求头
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 记录请求日志（开发环境）
+    // 记录请求日志（仅开发环境且简略）
     if (import.meta.env.DEV) {
-      console.log(`[请求] ${config.method?.toUpperCase()} ${config.url}`, {
-        params: config.params,
-        data: config.data
-      });
+      console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`);
     }
 
     return config;
   },
   (error) => {
-    console.error('[请求错误]', error);
     return Promise.reject(error);
   }
 );
@@ -69,75 +65,34 @@ request.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
     const { code, message, data } = response.data;
 
-    // 记录响应日志（开发环境）
-    if (import.meta.env.DEV) {
-      console.log(`[响应] ${response.config.url}`, response.data);
-    }
-
     // 业务状态码 200 表示成功
     if (code === 200) {
-      // 直接返回完整的 data（包含 needSwitchRole、currentRole 等字段）
       return data;
     }
 
-    // 处理业务错误码
-    if (code === 500 && message && (
-      message.includes('身份验证失败') || 
-      message.includes('token失效') || 
-      message.includes('Token过期') ||
-      message.includes('token过期') ||
-      message.includes('未登录') ||
-      message.includes('登录失效')
-    )) {
-      // 身份验证失效，清除用户状态并跳转到登录页
-      console.warn('身份验证失败，跳转到登录页面:', message);
-      
-      // 清除localStorage中的用户信息
-      localStorage.removeItem('token');
-      localStorage.removeItem('userInfo');
-      
-      // 显示身份验证失败提示
-      ElMessage.error(message || '身份验证已失效，请重新登录');
-      
-      // 使用location.href跳转，避免路由守卫的干扰
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
-      
-      return Promise.reject(new Error(message || '身份验证失败'));
+    // 处理认证失效情况
+    if (code === 401) {
+      clearLocalAuth();
+      ElMessage.error(message || '登录已过期，请重新登录');
+      return Promise.reject(new Error(message || 'Unauthorized'));
     }
 
-    // 其他业务失败，显示错误提示
+    // 处理其他业务错误
     ElMessage.error(message || '请求失败');
-    return Promise.reject(new Error(message || '请求失败'));
+    return Promise.reject(new Error(message || 'Business Error'));
   },
   (error) => {
-    console.error('[响应错误]', error);
-
-    // 处理不同的 HTTP 错误状态码
-    let errorMessage = '网络错误，请稍后重试';
-
     if (error.response) {
-      // 服务器返回了错误响应
       const { status, data } = error.response;
+      let errorMessage = data?.message || '请求失败';
 
       switch (status) {
-        case 400:
-          errorMessage = data?.message || '请求参数错误';
-          break;
         case 401:
-          errorMessage = '未授权，请重新登录';
-          // 清除 token 并跳转到登录页
-          localStorage.removeItem('token');
-          localStorage.removeItem('userInfo');
-          // 显示错误提示
-          ElMessage.error(errorMessage);
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
+          clearLocalAuth();
+          errorMessage = '登录已过期，请重新登录';
           break;
         case 403:
-          errorMessage = '拒绝访问，权限不足';
+          errorMessage = '无权访问此资源';
           break;
         case 404:
           errorMessage = '请求的资源不存在';
@@ -145,25 +100,31 @@ request.interceptors.response.use(
         case 500:
           errorMessage = '服务器内部错误';
           break;
-        default:
-          errorMessage = data?.message || `请求失败 (${status})`;
       }
-    } else if (error.request) {
-      // 请求已发出但没有收到响应
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = '请求超时，请检查网络连接';
-      } else {
-        errorMessage = '网络错误，请检查网络连接';
-      }
+      
+      ElMessage.error(errorMessage);
+    } else if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时，请检查网络');
     } else {
-      // 请求配置出错
-      errorMessage = error.message || '未知错误';
+      ElMessage.error('网络错误，请稍后重试');
     }
-
-    ElMessage.error(errorMessage);
+    
     return Promise.reject(error);
   }
 );
+
+/**
+ * 清除本地认证信息
+ */
+function clearLocalAuth() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userInfo');
+  // 如果在组件外使用，可以通过 import 动态获取 store
+  import('@/stores/userStore').then(({ useUserStore }) => {
+    const userStore = useUserStore();
+    userStore.logout();
+  });
+}
 
 // ==================== 导出 ====================
 export default typedRequest;

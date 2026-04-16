@@ -21,7 +21,7 @@
       <!-- 职位类别 -->
       <el-form-item label="职位类别" prop="category">
         <el-cascader
-          v-model="categoryValue"
+          v-model="formData.category"
           :options="categoryOptions"
           :props="{ expandTrigger: 'hover', emitPath: false }"
           placeholder="请选择职位类别"
@@ -244,7 +244,6 @@ const formData = reactive<{
 const companyInfo = ref<CompanyInfo | null>(null)
 
 // 职位类别选项
-const categoryValue = ref('')
 const categoryOptions = [
   {
     value: '技术',
@@ -461,7 +460,6 @@ const handleSubmit = async () => {
 
     const requestData = {
       ...formData,
-      category: categoryValue.value,
       companyId: companyInfo.value.id,
       tags: currentTags.value.length > 0 ? JSON.stringify(currentTags.value) : undefined
     }
@@ -511,7 +509,6 @@ watch(
         tags: newPosition.tags,
         status: newPosition.status // 编辑时保持原有状态
       })
-      categoryValue.value = newPosition.category
     } else {
       // 重置表单
       Object.assign(formData, {
@@ -528,7 +525,6 @@ watch(
         tags: '',
         status: 0 // 创建新职位默认为关闭状态
       })
-      categoryValue.value = ''
     }
   },
   { immediate: true }

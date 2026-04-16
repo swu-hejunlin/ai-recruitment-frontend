@@ -114,49 +114,84 @@
           </template>
 
           <el-table
-            :data="applicationsWithDetails.length > 0 ? applicationsWithDetails : tableData"
+            :data="tableData"
             v-loading="loading && tableData.length > 0"
             stripe
             style="width: 100%"
             :border="true"
           >
-            <el-table-column label="职位信息" width="300">
+            <el-table-column label="职位信息" width="320">
               <template #default="{ row }">
                 <div class="position-info" @click="viewJobDetailFromApp(row.id)" style="cursor: pointer">
                   <div class="position-header">
-                    <h4 class="position-title">
-                      {{ getPositionTitle(row) }}
-                    </h4>
+                    <div class="position-title-wrapper">
+                      <el-tooltip :content="getPositionTitle(row)" placement="top">
+                        <h4 class="position-title">
+                          {{ getPositionTitle(row) }}
+                        </h4>
+                      </el-tooltip>
+                      <el-tag v-if="row.status === 5" type="success" size="small">录用</el-tag>
+                      <el-tag v-else-if="row.status === 3" type="warning" size="small">面试中</el-tag>
+                      <el-tag v-else-if="row.status === 4" type="danger" size="small">不合适</el-tag>
+                    </div>
                     <div class="position-company">
-                      <img 
-                        v-if="row.position?.companyLogo" 
-                        :src="row.position.companyLogo" 
-                        alt="公司Logo"
+                      <el-avatar 
+                        v-if="row.position?.companyLogo || row.company?.logo" 
+                        :src="row.position?.companyLogo || row.company?.logo" 
+                        :size="16"
+                        shape="square"
                         class="company-logo-small"
                       />
-                      <span>{{ getCompanyName(row) }}</span>
+                      <el-tooltip :content="getCompanyName(row)" placement="top">
+                        <span class="company-name">{{ getCompanyName(row) }}</span>
+                      </el-tooltip>
+                      <el-tag v-if="row.position?.category" size="mini" type="info">{{ row.position.category }}</el-tag>
                     </div>
                   </div>
                   <div class="position-details">
-                    <div class="salary-range" v-if="hasSalaryInfo(row)">
-                      <el-tag size="small" type="danger">
-                        {{ row.position?.salaryMin || 0 }}k-{{ row.position?.salaryMax || 0 }}k
+                    <div class="position-metadata">
+                      <div class="salary-range" v-if="hasSalaryInfo(row)">
+                        <span class="salary-icon">💰</span>
+                        <span class="salary-text">
+                          {{ formatSalary(row) }}
+                        </span>
+                      </div>
+                      <div class="position-location" v-if="getCityInfo(row) && getCityInfo(row) !== '点击查看详情'">
+                        <el-icon><Location /></el-icon>
+                        <span>{{ getCityInfo(row) }}</span>
+                      </div>
+                      <div class="ai-score-badge" v-if="row.aiScore !== null && row.aiScore !== undefined">
+                        <el-rate
+                          v-model="row.aiScore"
+                          disabled
+                          allow-half
+                          :max="5"
+                          :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                          text-color="#ff9900"
+                          size="small"
+                        />
+                        <span class="ai-score-text">{{ row.aiScore.toFixed(1) }}</span>
+                      </div>
+                    </div>
+                    
+                    <div class="position-requirements" v-if="hasRequirementInfo(row)">
+                      <el-tag v-if="row.position?.educationMin" size="mini">
+                        学历: {{ formatEducation(row.position.educationMin) }}
+                      </el-tag>
+                      <el-tag v-if="row.position?.workYearsMin" size="mini" type="info">
+                        经验: {{ formatExperience(row.position.workYearsMin) }}
                       </el-tag>
                     </div>
-                    <div class="position-location">
-                      <el-icon><Location /></el-icon>
-                      <span>{{ getCityInfo(row) }}</span>
-                    </div>
-                    <div class="position-requirements" v-if="hasRequirementInfo(row)">
-                      <span v-if="row.position?.educationMin" class="education">
-                        学历: {{ formatEducation(row.position.educationMin) }}
-                      </span>
-                      <span v-if="row.position?.workYearsMin" class="experience">
-                        经验: {{ formatExperience(row.position.workYearsMin) }}
+                    
+                    <div v-if="!hasRequirementInfo(row) && !hasSalaryInfo(row) && !hasCityInfo(row)" class="position-hint">
+                      <span class="hint-text">
+                        <el-icon><InfoFilled /></el-icon>
+                        点击查看职位详细要求和公司信息
                       </span>
                     </div>
-                    <div v-else class="position-hint">
-                      <span class="hint-text">点击查看职位详细要求和公司信息</span>
+                    
+                    <div class="apply-time-sm" v-if="row.createTime">
+                      投递时间: {{ formatDateShort(row.createTime) }}
                     </div>
                   </div>
                 </div>
@@ -170,7 +205,7 @@
                   size="small"
                   round
                 >
-                  {{ APPLICATION_STATUS_MAP[row.status as ApplicationStatus] }}
+                  {{ getStatusLabel(row.status) }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -202,7 +237,6 @@
                     size="small"
                     plain
                     @click="viewCompanyInfo(row.id)"
-                    :loading="loadingCompany && selectedApplicationForInfo?.id === row.id"
                   >
                     查看公司
                   </el-button>
@@ -221,8 +255,8 @@
           <!-- 分页 -->
           <div class="pagination-container" v-if="totalApplications > pageSize">
             <el-pagination
-              v-model:current-page="pageNum"
-              v-model:page-size="pageSize"
+              :current-page="pageNum"
+              :page-size="pageSize"
               :page-sizes="[10, 20, 30, 50]"
               layout="total, sizes, prev, pager, next, jumper"
               :total="totalApplications"
@@ -265,86 +299,26 @@
         </div>
       </el-dialog>
 
-      <!-- 公司信息对话框 -->
-      <el-dialog
-        v-model="companyDialogVisible"
-        :title="`公司信息 - ${selectedApplicationForInfo?.positionTitle || ''}`"
-        width="700px"
-        top="5vh"
-      >
-        <div v-if="loadingCompany" class="loading-container">
-          <el-icon class="loading-icon"><Loading /></el-icon>
-          <p>加载公司信息中...</p>
-        </div>
-        
-        <div v-else-if="companyInfo" class="company-info-content">
-          <!-- 公司基本信息 -->
-          <div class="company-header">
-            <div class="company-logo-name">
-              <img 
-                v-if="companyInfo.logo" 
-                :src="companyInfo.logo" 
-                alt="公司logo" 
-                class="company-logo"
-              />
-              <div class="company-name-wrapper">
-                <h3>{{ companyInfo.companyName }}</h3>
-                <div class="company-tags">
-                  <el-tag type="info">{{ companyInfo.industry || '未填写' }}</el-tag>
-                  <el-tag>{{ SCALE_MAP[companyInfo.scale] || '未知规模' }}</el-tag>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="company-info-section">
-            <h4>公司信息</h4>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="info-label">所在城市：</span>
-                <span class="info-value">{{ companyInfo.city || '未填写' }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">企业规模：</span>
-                <span class="info-value">{{ SCALE_MAP[companyInfo.scale] || '未填写' }}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="company-description-section" v-if="companyInfo.description">
-            <h4>公司简介</h4>
-            <div class="description-content">
-              {{ companyInfo.description }}
-            </div>
-          </div>
-          
-          <div v-else class="empty-description">
-            <p>暂无公司简介</p>
-          </div>
-        </div>
-        
-        <div v-else class="error-container">
-          <el-empty description="加载公司信息失败">
-            <p>无法加载公司信息，请稍后重试</p>
-          </el-empty>
-        </div>
-      </el-dialog>
+      
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Refresh, Loading, Location, Document, Timer, ChatDotSquare, SuccessFilled, Position } from '@element-plus/icons-vue'
-import AppLayout from '@/components/AppLayout.vue'
-import JobDetailDialog from '@/components/JobDetailDialog.vue'
-import { getSeekerApplications, getCompanyFromApplication, getPositionFromApplication, getApplicationDetail } from '@/utils/api'
-import type { ApplicationInfo, ApplicationStatus, PositionInfo, EducationLevel, CompanyFromApplication, PositionFromApplication } from '@/types'
-import { APPLICATION_STATUS_MAP, SCALE_MAP } from '@/types'
+import { Refresh, Loading, Location, Document, Timer, ChatDotSquare, SuccessFilled, Position, InfoFilled } from '@element-plus/icons-vue'
+// 动态导入组件
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'))
+const JobDetailDialog = defineAsyncComponent(() => import('../components/JobDetailDialog.vue'))
+import { getSeekerApplications, getPositionFromApplication } from '../utils/api'
+import { useUserStore } from '../stores/userStore'
+import type { ApplicationInfo, PositionInfo, EducationLevel, PositionFromApplication } from '../types'
+import { APPLICATION_STATUS_MAP } from '../types'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 分页
 const pageNum = ref(1)
@@ -358,12 +332,8 @@ const tableData = ref<ApplicationInfo[]>([])
 // 对话框
 const detailDialogVisible = ref(false)
 const aiScoreDialogVisible = ref(false)
-const companyDialogVisible = ref(false)
 const selectedPosition = ref<PositionInfo | null>(null)
-const companyInfo = ref<CompanyFromApplication | null>(null)
-const loadingCompany = ref(false)
 const loadingPosition = ref(false)
-const selectedApplicationForInfo = ref<ApplicationInfo | null>(null)
 const selectedApplicationForPosition = ref<ApplicationInfo | null>(null)
 const selectedApplication = ref<ApplicationInfo | null>(null)
 const positionCache = ref<Record<number, PositionFromApplication>>({})
@@ -377,7 +347,7 @@ const educationMap: Record<EducationLevel, string> = {
   5: '博士'
 }
 
-// 计算属性
+// 计算属性 (注意：目前仅统计当前页数据，完整统计需后端支持)
 const pendingCount = computed(() => {
   return tableData.value.filter(item => item.status === 1).length
 })
@@ -390,104 +360,66 @@ const hiredCount = computed(() => {
   return tableData.value.filter(item => item.status === 5).length
 })
 
-// 详细数据
-const applicationsWithDetails = ref<ApplicationInfo[]>([])
-const loadingDetails = ref(false)
-
 // 获取投递列表
 const fetchApplications = async () => {
   try {
     loading.value = true
+    
     const response = await getSeekerApplications({
       pageNum: pageNum.value,
       pageSize: pageSize.value
     })
     
     const records = response.records || []
-    tableData.value = records
     totalApplications.value = response.total || 0
+    
+    // 简化数据处理：直接使用API返回的字段
+    const enhancedRecords = records.map((record: ApplicationInfo) => ({
+      ...record,
+      positionTitle: record.positionTitle || `职位-${record.positionId}`,
+      companyName: record.companyName || `公司-${record.companyId}`,
+      position: record.position || { id: record.positionId, title: record.positionTitle || `职位-${record.positionId}` }
+    } as ApplicationInfo))
+    
+    tableData.value = enhancedRecords
     
     // 清除之前的缓存
     positionCache.value = {}
-    applicationsWithDetails.value = []
     
-    // 批量获取详细信息（如果有记录）
-    if (records.length > 0) {
-      await fetchApplicationsDetails(records)
-    }
-    
+    // 立即刷新全局计数
+    userStore.refreshCounts()
   } catch (error) {
     console.error('获取投递列表失败', error)
     ElMessage.error('获取投递列表失败')
     tableData.value = []
     totalApplications.value = 0
-    applicationsWithDetails.value = []
   } finally {
     loading.value = false
   }
 }
 
-// 批量获取投递记录详细信息
-const fetchApplicationsDetails = async (records: ApplicationInfo[]) => {
-  try {
-    loadingDetails.value = true
-    
-    // 使用Promise.all并行获取所有详情
-    const detailPromises = records.map(record => 
-      getApplicationDetail(record.id).then(response => {
-        return {
-          ...record,
-          // 如果有详情数据，则合并
-          companyName: response.application?.companyName || record.companyName,
-          positionTitle: response.application?.positionTitle || record.positionTitle,
-          position: response.application?.position ? {
-            ...record.position,
-            ...response.application.position
-          } : record.position
-        }
-      }).catch(error => {
-        console.error(`获取投递${record.id}的详情失败:`, error)
-        // 如果详情请求失败，返回原始记录
-        return record
-      })
-    )
-    
-    const detailedRecords = await Promise.all(detailPromises)
-    applicationsWithDetails.value = detailedRecords
-    
-    // 更新缓存
-    detailedRecords.forEach(record => {
-      if (record.position && record.positionId) {
-        positionCache.value[record.positionId] = record.position as PositionFromApplication
-      }
-    })
-    
-  } catch (error) {
-    console.error('批量获取详情失败:', error)
-    // 不显示错误信息，因为这只是增强功能
-  } finally {
-    loadingDetails.value = false
-  }
-}
+// 不再需要批量获取详情函数，因为API已直接返回关键字段
+// 职位详情在需要查看时通过viewJobDetailFromApp函数获取
 
 
 
-// 查看公司信息
+// 查看公司信息 - 跳转到公司详情页面
 const viewCompanyInfo = async (applicationId: number) => {
   try {
-    loadingCompany.value = true
-    // 查找对应的应用
+    // 查找对应的应用获取公司ID
     const app = tableData.value.find(item => item.id === applicationId)
-    selectedApplicationForInfo.value = app || null
+    if (!app?.companyId) {
+      ElMessage.warning('暂无法查看该公司详情')
+      return
+    }
     
-    const response = await getCompanyFromApplication(applicationId)
-    companyInfo.value = response
-    companyDialogVisible.value = true
+    // 跳转到公司详情页面
+    router.push({
+      path: `/company/${app.companyId}`
+    })
   } catch (error) {
-    console.error('获取公司信息失败:', error)
-    ElMessage.error('获取公司信息失败')
-  } finally {
-    loadingCompany.value = false
+    console.error('查看公司详情失败:', error)
+    ElMessage.error('查看公司详情失败，请稍后重试')
   }
 }
 
@@ -576,6 +508,59 @@ const formatExperience = (years?: number): string => {
   return '10年以上'
 }
 
+// 格式化薪资显示
+const formatSalary = (row: ApplicationInfo): string => {
+  const position = row.position as any
+  if (position?.salaryMin && position?.salaryMax) {
+    return `${position.salaryMin}k-${position.salaryMax}k`
+  } else if (position?.salaryMin) {
+    return `${position.salaryMin}k以上`
+  } else if (position?.salaryMax) {
+    return `${position.salaryMax}k以下`
+  } else if (position?.salary) {
+    return `${position.salary}k`
+  }
+  return '面议'
+}
+
+// 格式化短日期
+const formatDateShort = (dateString: string): string => {
+  if (!dateString) return '未知'
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) {
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      if (diffHours === 0) {
+        const diffMinutes = Math.floor(diffMs / (1000 * 60))
+        if (diffMinutes < 1) return '刚刚'
+        return `${diffMinutes}分钟前`
+      }
+      return `${diffHours}小时前`
+    } else if (diffDays === 1) {
+      return '昨天'
+    } else if (diffDays < 7) {
+      return `${diffDays}天前`
+    } else {
+      return date.toLocaleDateString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit'
+      })
+    }
+  } catch (error) {
+    return dateString
+  }
+}
+
+// 检查是否有城市信息
+const hasCityInfo = (row: ApplicationInfo): boolean => {
+  const cityInfo = getCityInfo(row)
+  return !!cityInfo && cityInfo !== '点击查看详情'
+}
+
 const getStatusTagType = (status: number): string => {
   const typeMap: Record<number, string> = {
     1: 'info',      // 待查看-蓝色
@@ -587,24 +572,23 @@ const getStatusTagType = (status: number): string => {
   return typeMap[status] || ''
 }
 
+const getStatusLabel = (status: any): string => {
+  return (APPLICATION_STATUS_MAP as Record<number, string>)[status as number] || '未知'
+}
+
 // 辅助函数：获取职位标题
 const getPositionTitle = (row: ApplicationInfo): string => {
-  if (row.positionTitle) return row.positionTitle
-  if (row.position?.title) return row.position.title
-  return `职位-${row.positionId}`
+  return row.positionTitle || `职位-${row.positionId}`
 }
 
 // 辅助函数：获取公司名称
 const getCompanyName = (row: ApplicationInfo): string => {
-  if (row.companyName) return row.companyName
-  if (row.position?.companyName) return row.position.companyName
-  return `公司-${row.companyId}`
+  return row.companyName || `公司-${row.companyId}`
 }
 
 // 辅助函数：获取城市信息
 const getCityInfo = (row: ApplicationInfo): string => {
   if (row.position?.city) return row.position.city
-  if (positionCache.value[row.positionId]?.city) return positionCache.value[row.positionId].city
   return '点击查看详情'
 }
 
@@ -619,7 +603,35 @@ const hasRequirementInfo = (row: ApplicationInfo): boolean => {
 }
 
 onMounted(() => {
+  console.log('SeekerApplications组件已挂载，开始加载数据')
+  
+  // 添加延迟加载以避免可能的初始化问题
+  setTimeout(() => {
+    fetchApplications()
+  }, 100)
+})
+
+// 添加智能缓存管理
+const clearCache = () => {
+  positionCache.value = {}
+  console.log('已清除职位缓存')
+}
+
+// 添加手动刷新功能（可以从控制台调用）
+const manualRefresh = () => {
+  console.log('手动刷新投递记录')
+  clearCache()
   fetchApplications()
+}
+
+
+
+// 暴露一些方法供调试使用
+defineExpose({
+  fetchApplications,
+  clearCache,
+  manualRefresh,
+  positionCache
 })
 </script>
 
@@ -869,6 +881,137 @@ onMounted(() => {
   border-top: 1px solid #ebeef5;
 }
 
+/* 职位信息新样式 */
+.position-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.position-company {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+.position-company .company-name {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.position-metadata {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.salary-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.salary-icon {
+  font-size: 12px;
+}
+
+.salary-text {
+  font-size: 12px;
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+.ai-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-score-text {
+  font-size: 11px;
+  color: #ff9900;
+  font-weight: 600;
+}
+
+.apply-time-sm {
+  font-size: 11px;
+  color: #909399;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.position-metadata .position-location {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: #909399;
+}
+
+/* 职位信息样式增强 */
+.position-info:hover {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.position-header {
+  margin-bottom: 8px;
+}
+
+.position-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
+  line-height: 1.3;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.position-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.position-requirements {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.position-hint {
+  margin-top: 4px;
+}
+
+.hint-text {
+  font-size: 11px;
+  color: #67c23a;
+  font-style: italic;
+  background: #f0f9eb;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.hint-text .el-icon {
+  font-size: 11px;
+}
+
 /* AI评分详情对话框 */
 .ai-score-detail {
   text-align: center;
@@ -905,6 +1048,8 @@ onMounted(() => {
   font-weight: 500;
 }
 
+
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .seeker-applications-container {
@@ -935,5 +1080,7 @@ onMounted(() => {
   .action-buttons {
     flex-direction: row;
   }
+  
+  
 }
 </style>

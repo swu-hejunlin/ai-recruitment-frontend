@@ -281,18 +281,19 @@ style="margin-bottom: 20px"
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick, defineAsyncComponent } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { OfficeBuilding, Upload, Plus, RefreshRight, Select, Edit, Close } from '@element-plus/icons-vue';
-import { useUserStore } from '@/stores/userStore';
-import AppLayout from '@/components/AppLayout.vue';
+import { useUserStore } from '../stores/userStore';
+// 动态导入组件
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'));
 import {
   getCompanyInfo,
   updateCompanyInfo,
   uploadCompanyLogo,
   uploadBusinessLicense,
   uploadFile
-} from '@/utils/api';
+} from '../utils/api';
 
 // ==================== 行业选项 ====================
 const industryOptions = [
@@ -684,117 +685,79 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ==================== 页面容器 ==================== */
+/* ==================== 整体布局优化 ==================== */
 .company-container {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* ==================== 标签切换 ==================== */
-/* 已移除标签切换样式，现在通过左侧导航栏切换 */
-
-/* ==================== 页面标题 ==================== */
 .page-header {
+  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  align-items: flex-end;
 }
 
 .header-left h2 {
   font-size: 24px;
+  font-weight: 700;
   color: #303133;
   margin: 0 0 8px 0;
 }
 
 .header-left p {
   font-size: 14px;
-  color: #606266;
+  color: #909399;
   margin: 0;
 }
 
-.edit-actions {
-  display: flex;
-  gap: 12px;
-}
-
-/* ==================== 表单禁用状态样式 ==================== */
-.company-form:deep(.el-form-item.is-disabled .el-form-item__label) {
-  color: #909399;
-}
-
-.company-form:deep(.el-form-item.is-disabled .el-input .el-input__wrapper),
-.company-form:deep(.el-form-item.is-disabled .el-select .el-input__wrapper),
-.company-form:deep(.el-form-item.is-disabled .el-textarea .el-textarea__inner) {
-  background-color: #f5f7fa;
-  border-color: #e4e7ed;
-  color: #909399;
-}
-
-.company-form:deep(.el-form-item.is-disabled .el-radio),
-.company-form:deep(.el-form-item.is-disabled .el-checkbox) {
-  color: #909399;
-  cursor: not-allowed;
-}
-
-/* ==================== 加载状态 ==================== */
-.loading-wrapper {
-  background: #fff;
-  padding: 24px;
-  border-radius: 8px;
-}
-
-/* ==================== 内容布局 ==================== */
 .company-content {
   display: flex;
-  gap: 20px;
+  gap: 24px;
+  align-items: flex-start;
 }
 
+/* ==================== 左侧卡片优化 ==================== */
 .company-left {
-  width: 300px;
+  width: 320px;
   flex-shrink: 0;
 }
 
-.company-right {
-  flex: 1;
-  min-width: 0;
+.el-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
 }
 
-/* ==================== Logo卡片 ==================== */
-.logo-card :deep(.el-card__body) {
-  padding-top: 10px;
+.card-header {
+  font-weight: 700;
+  color: #303133;
 }
 
 .logo-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
+  padding: 10px 0;
 }
 
 .logo-upload {
   margin-top: 16px;
 }
 
-/* ==================== 营业执照卡片 ==================== */
-.license-card :deep(.el-card__body) {
-  padding-top: 0;
-}
-
 .license-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .license-image {
   width: 100%;
-  max-height: 200px;
-  border-radius: 4px;
-  border: 1px solid #ebeef5;
+  height: 180px;
+  border-radius: 8px;
+  border: 1px solid #f0f2f5;
 }
 
 .license-upload {
@@ -802,63 +765,64 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 20px 0;
-  gap: 10px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
 }
 
 .upload-tip {
   font-size: 12px;
   color: #909399;
+  margin-top: 8px;
 }
 
-/* ==================== 表单样式 ==================== */
-.company-form {
-  padding: 10px;
+/* ==================== 右侧表单优化 ==================== */
+.company-right {
+  flex: 1;
 }
 
 .form-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px dashed #ebeef5;
-}
-
-.form-section:last-of-type {
-  border-bottom: none;
-  margin-bottom: 0;
+  margin-bottom: 32px;
 }
 
 .section-title {
   font-size: 16px;
+  font-weight: 700;
   color: #303133;
-  margin-bottom: 20px;
-  padding-left: 10px;
-  border-left: 3px solid #409eff;
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
+  display: flex;
+  align-items: center;
 }
 
-/* ==================== 福利标签 ==================== */
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background-color: #00beaa;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
 .welfare-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  background-color: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  min-height: 48px;
 }
 
 .welfare-tag {
-  font-size: 14px;
+  margin: 0;
 }
 
 .welfare-input {
-  width: 120px;
+  width: 100px;
 }
 
-
-
-/* ==================== 响应式 ==================== */
-@media (max-width: 768px) {
-  .company-content {
-    flex-direction: column;
-  }
-
-  .company-left {
-    width: 100%;
-  }
+.loading-wrapper {
+  padding: 40px 0;
 }
 </style>
