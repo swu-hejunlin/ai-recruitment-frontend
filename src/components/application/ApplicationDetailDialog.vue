@@ -111,11 +111,11 @@
           </div>
           <div class="basic-info-item">
             <span class="info-label">当前薪资：</span>
-            <span class="info-value">{{ applicationDetail.jobSeeker?.currentSalary || '未填写' }}万/年</span>
+            <span class="info-value">{{ applicationDetail.jobSeeker?.currentSalary || '未填写' }}K/月</span>
           </div>
           <div class="basic-info-item">
             <span class="info-label">期望薪资：</span>
-            <span class="info-value">{{ applicationDetail.jobSeeker?.expectedSalary || '未填写' }}万/年</span>
+            <span class="info-value">{{ applicationDetail.jobSeeker?.expectedSalary || '未填写' }}K/月</span>
           </div>
           <div class="basic-info-item">
             <span class="info-label">地址：</span>

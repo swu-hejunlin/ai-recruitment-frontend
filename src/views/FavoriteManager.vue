@@ -9,7 +9,7 @@
           <div class="favorite-list">
             <el-table :data="positionFavorites" style="width: 100%" border>
               <el-table-column prop="id" label="收藏ID" width="80" />
-              <el-table-column prop="positionTitle" label="职位名称" min-width="120" />
+              <el-table-column prop="positionTitle" label="职位名称" width="150" />
               <el-table-column prop="companyName" label="公司名称" width="180" />
               <el-table-column prop="salaryMin" label="薪资范围" width="120">
                 <template #default="scope">
@@ -22,7 +22,7 @@
                   {{ formatDate(scope.row.createTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right">
+              <el-table-column label="操作" width="250" fixed="right">
                 <template #default="scope">
                   <el-button size="small" @click="handleViewPosition(scope.row.positionId)">
                     <el-icon><View /></el-icon>
@@ -45,7 +45,7 @@
           <div class="favorite-list">
             <el-table :data="companyFavorites" style="width: 100%" border>
               <el-table-column prop="id" label="收藏ID" width="80" />
-              <el-table-column prop="companyName" label="公司名称" min-width="150" />
+              <el-table-column prop="companyName" label="公司名称" width="180" />
               <el-table-column prop="industry" label="行业" width="120" />
               <el-table-column prop="scale" label="公司规模" width="120" />
               <el-table-column prop="createTime" label="收藏时间" width="180">
@@ -53,7 +53,7 @@
                   {{ formatDate(scope.row.createTime) }}
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right">
+              <el-table-column label="操作" width="250" fixed="right">
                 <template #default="scope">
                   <el-button size="small" @click="handleViewCompany(scope.row.companyId)">
                     <el-icon><View /></el-icon>

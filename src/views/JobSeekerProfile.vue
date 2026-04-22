@@ -12,14 +12,14 @@
           <div class="title-wrapper">
             <h2>
               <el-icon :size="24" color="#00beaa"><UserFilled /></el-icon>
-              个人信息管理
+              个人简历管理
             </h2>
             <div class="title-badge">
               <el-tag type="success" size="small" v-if="!isFirstTime">已完善</el-tag>
               <el-tag type="warning" size="small" v-else>待完善</el-tag>
             </div>
           </div>
-          <p>完善您的个人资料，让更多企业看到优秀的您</p>
+          <p>完善您的个人简历，让更多企业看到优秀的您</p>
         </div>
         <div class="header-right">
           <!-- 预览模式：显示编辑按钮 -->
@@ -35,11 +35,30 @@
           </el-button>
           <!-- 编辑模式：显示操作按钮组 -->
           <div v-else class="edit-actions">
-            <el-button type="danger" @click="exitEditMode" class="action-btn">
+            <el-button 
+              type="success" 
+              @click="handleSmartFill"
+              :loading="smartFilling"
+              class="action-btn"
+            >
+              <el-icon><MagicStick /></el-icon>
+              AI智能填充个人信息
+            </el-button>
+            <el-button 
+              type="danger" 
+              @click="exitEditMode" 
+              class="action-btn"
+              :disabled="smartFilling"
+            >
               <el-icon><Close /></el-icon>
               取消编辑
             </el-button>
-            <el-button type="warning" @click="handleReset" class="action-btn">
+            <el-button 
+              type="warning" 
+              @click="handleReset" 
+              class="action-btn"
+              :disabled="smartFilling"
+            >
               <el-icon><RefreshRight /></el-icon>
               重置信息
             </el-button>
@@ -48,8 +67,9 @@
               :loading="saving" 
               @click="handleSave"
               class="action-btn"
+              :disabled="smartFilling"
             >
-              <el-icon><Select /></el-icon>
+              <el-icon><Check /></el-icon>
               保存修改
             </el-button>
           </div>
@@ -139,13 +159,25 @@
                   <span style="font-size: 12px; color: #909399;">{{ getResumeFileType(formData.resumeUrl) }}</span>
                 </div>
               </div>
-              <el-button 
-                type="danger" 
-                size="small" 
-                text 
-                @click="handleRemoveResume"
-                :disabled="!isEditing"
-              >删除</el-button>
+              <div class="resume-actions">
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  text 
+                  @click="analyzeUploadedResume"
+                  :loading="analyzingResume"
+                >
+                  <el-icon><DataAnalysis /></el-icon>
+                  分析简历
+                </el-button>
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  text 
+                  @click="handleRemoveResume"
+                  :disabled="!isEditing"
+                >删除</el-button>
+              </div>
             </div>
             <div v-else class="resume-upload">
               <el-button 
@@ -156,16 +188,26 @@
                 <el-icon><Upload /></el-icon>
                 上传简历
               </el-button>
-              <input
-                ref="resumeInputRef"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                style="display: none"
-                @change="handleResumeChange"
-              />
               <p class="upload-tip">支持 PDF、Word 格式</p>
             </div>
+            <!-- 始终存在的文件输入元素，用于智能填充 -->
+            <input
+              ref="resumeInputRef"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style="display: none"
+              @change="handleResumeChange"
+            />
           </el-card>
+        </div>
+        
+        <!-- 智能填充加载遮罩层 -->
+        <div v-if="showLoadingMask" class="loading-mask">
+          <div class="loading-content">
+            <el-icon class="loading-icon"><Loading /></el-icon>
+            <p class="loading-text">正在智能分析简历，请稍候...</p>
+            <p class="loading-subtext">系统正在提取个人信息并填充到表单中</p>
+          </div>
         </div>
 
         <!-- 右侧：详细信息表单 -->
@@ -251,15 +293,15 @@
                 <el-row :gutter="20">
                   <el-col :span="12">
                     <el-form-item label="当前薪资" prop="currentSalary">
-                      <el-input v-model="formData.currentSalary" placeholder="单位：万元/年">
-                        <template #append>万元/年</template>
+                      <el-input v-model="formData.currentSalary" placeholder="单位：K/月">
+                        <template #append>K/月</template>
                       </el-input>
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
                     <el-form-item label="期望薪资" prop="expectedSalary">
-                      <el-input v-model="formData.expectedSalary" placeholder="单位：万元/年">
-                        <template #append>万元/年</template>
+                      <el-input v-model="formData.expectedSalary" placeholder="单位：K/月">
+                        <template #append>K/月</template>
                       </el-input>
                     </el-form-item>
                   </el-col>
@@ -401,8 +443,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage, ElImageViewer, ElDialog, type FormInstance, type FormRules } from 'element-plus';
-import { User, Upload, Document, Plus, RefreshRight, Select, Edit, Close, Warning, Loading, UserFilled, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue';
+import { User, Upload, Document, Plus, RefreshRight, Select, Edit, Close, Warning, Loading, UserFilled, CircleCheckFilled, WarningFilled, DataAnalysis, MagicStick } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/userStore';
 import AppLayout from '@/components/AppLayout.vue';
 import WorkExperienceManager from '@/components/work-experience/WorkExperienceManager.vue';
@@ -415,7 +458,9 @@ import {
   uploadResume,
   uploadFile,
   getResume,
-  getAvatar
+  getAvatar,
+  analyzeResume,
+  smartFillResume
 } from '@/utils/api';
 import { GENDER_MAP } from '@/types';
 
@@ -427,6 +472,7 @@ const formRef = ref<FormInstance>();
 
 // 用户状态
 const userStore = useUserStore();
+const router = useRouter();
 
 // 表单数据
 const formData = reactive({
@@ -455,6 +501,9 @@ const resumePreviewTitle = ref('');
 const currentPreviewExtension = ref('');
 const currentPreviewType = ref(''); // 'pdf', 'office', 'other'
 const downloading = ref(false);
+const analyzingResume = ref(false);
+const smartFilling = ref(false);
+const showLoadingMask = ref(false);
 
 // 判断是否是Office文档
 const isOfficeDocument = (extension: string): boolean => {
@@ -760,7 +809,6 @@ const getResumeFileType = (url: string): string => {
 const openResumePreview = async () => {
   try {
     // 显示加载状态
-    resumePreviewUrl.value = '';
     resumePreviewVisible.value = true;
     resumePreviewTitle.value = '正在获取简历...';
     
@@ -773,118 +821,265 @@ const openResumePreview = async () => {
       return;
     }
     
-    const extension = getFileExtension(resumeUrl);
+    resumePreviewTitle.value = '简历预览';
     
-    if (!extension) {
-      // 无法识别文件类型，直接下载
+    // 由于阿里云OSS限制，在线预览功能暂时不可用
+    // 直接下载简历文件
+    ElMessage.info('在线预览功能暂时不可用，正在打开简历文件...');
+    
+    // 延迟执行，确保用户看到提示
+    setTimeout(() => {
       window.open(resumeUrl, '_blank');
-      ElMessage.warning('无法识别文件类型，已直接打开');
-      resumePreviewVisible.value = false;
-      return;
-    }
-    
-    // 设置预览相关状态
-    resumePreviewUrl.value = resumeUrl;
-    currentPreviewExtension.value = extension;
-    
-    // 记录调试信息
-    console.log('解析到的扩展名:', extension);
-    console.log('原始简历URL:', resumeUrl);
-    
-    // 检测任何Content-Type参数
-    const contentTypePatterns = [
-      /response-content-type=([^&]*)/i,
-      /response_content_type=([^&]*)/i,
-      /content-type=([^&]*)/i,
-      /content_type=([^&]*)/i
-    ];
-    
-    let detectedContentType = '';
-    for (const pattern of contentTypePatterns) {
-      const match = resumeUrl.match(pattern);
-      if (match) {
-        detectedContentType = decodeURIComponent(match[1]).toLowerCase();
-        console.log('检测到Content-Type:', detectedContentType);
-        break;
-      }
-    }
-    
-    // 判断预览类型和构建最终预览URL
-    let previewType = 'other';
-    let finalPreviewUrl = resumeUrl; // 最终用于iframe预览的URL
-    
-    // 检查是否是PDF文件
-    const isPDF = extension === 'pdf' || detectedContentType.includes('pdf');
-    
-    if (isPDF) {
-      previewType = 'pdf';
-      resumePreviewTitle.value = '简历预览 - PDF文档';
-      
-      // 对于PDF文件，确保URL正确，移除不必要的参数
-      // 只需要保留签名、过期时间和AccessKeyId这些必要参数
-      // response-content-disposition=inline是必要的
-      
-      // 清理URL：移除可能导致400错误的response-content-type参数
-      if (resumeUrl.includes('&response-content-type=')) {
-        console.log('清理response-content-type参数以避免400错误');
-        finalPreviewUrl = resumeUrl.replace(/&response-content-type=[^&]*/i, '');
-      } else if (resumeUrl.includes('?response-content-type=')) {
-        // 如果不是以&开头，而是以?开头的第一个参数
-        console.log('清理response-content-type参数以避免400错误（首个参数）');
-        finalPreviewUrl = resumeUrl.replace(/\?response-content-type=[^&]*(&|$)/i, (_match, p1) => {
-          return p1 === '&' ? '?' : '';
-        });
-      }
-      
-    } else if (isOfficeDocument(extension)) {
-      previewType = 'office';
-      resumePreviewTitle.value = `简历预览 - ${extension.toUpperCase()}文档`;
-      
-      // 对于Office文档，使用Microsoft Office Web Viewer
-      // 但需要使用原始的完整URL（包括签名）
-      // Office Web Viewer可以处理带签名的URL
-      finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-      
-    } else if (detectedContentType) {
-      // 根据Content-Type判断
-      if (detectedContentType.includes('msword') || detectedContentType.includes('wordprocessingml')) {
-        previewType = 'office';
-        resumePreviewTitle.value = '简历预览 - Word文档';
-        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-      } else if (detectedContentType.includes('excel') || detectedContentType.includes('spreadsheetml')) {
-        previewType = 'office';
-        resumePreviewTitle.value = '简历预览 - Excel文档';
-        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-      } else if (detectedContentType.includes('presentation') || detectedContentType.includes('presentationml')) {
-        previewType = 'office';
-        resumePreviewTitle.value = '简历预览 - PowerPoint文档';
-        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-      } else if (detectedContentType.includes('powerpoint')) {
-        previewType = 'office';
-        resumePreviewTitle.value = '简历预览 - PowerPoint文档';
-        finalPreviewUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resumeUrl)}`;
-      } else {
-        // 显示Content-Type信息
-        resumePreviewTitle.value = `简历预览 - ${detectedContentType.split('/').pop() || '文档'}`;
-      }
-    } else {
-      // 无法识别任何类型，但通过文件扩展名判断
-      if (extension === 'pdf') {
-        previewType = 'pdf';
-        resumePreviewTitle.value = '简历预览 - PDF文档';
-      } else {
-        resumePreviewTitle.value = `简历预览 - ${extension || '未知格式'}`;
-      }
-    }
-    
-    currentPreviewType.value = previewType;
-    // 使用最终处理后的URL
-    resumePreviewUrl.value = finalPreviewUrl;
+    }, 500);
     
   } catch (error) {
     console.error('获取简历URL失败:', error);
     ElMessage.error('获取简历失败，请重试');
     resumePreviewVisible.value = false;
+  }
+};
+
+// 分析已上传的简历
+const analyzeUploadedResume = async () => {
+  try {
+    // 显示加载状态
+    analyzingResume.value = true;
+    
+    // 调用 API 获取简历 URL
+    const resumeUrl = await getResume();
+    
+    if (!resumeUrl) {
+      ElMessage.warning('您还没有上传简历');
+      analyzingResume.value = false;
+      return;
+    }
+    
+    // 调用分析API
+    const analysisResult = await analyzeResume({
+      resumeUrl: resumeUrl,
+      fileType: getFileExtension(resumeUrl)
+    });
+    
+    // 跳转到简历分析结果页面
+    router.push({
+      path: '/resume-analyzer',
+      query: {
+        analysisResult: JSON.stringify(analysisResult)
+      }
+    });
+    
+  } catch (error) {
+    console.error('分析简历失败:', error);
+    ElMessage.error('分析简历失败，请重试');
+  } finally {
+    analyzingResume.value = false;
+  }
+};
+
+// 智能填充简历信息
+const handleSmartFill = async () => {
+  console.log('=== 开始智能填充个人信息 ===');
+  try {
+    // 确认操作
+    console.log('1. 显示确认对话框');
+    await ElMessageBox.confirm(
+      '即将根据简历内容智能填充个人信息，是否继续？',
+      '智能填充',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    );
+    
+    smartFilling.value = true;
+    showLoadingMask.value = true;
+    console.log('2. 开始智能填充流程，显示加载遮罩层');
+    
+    // 禁用页面滚动
+    document.body.style.overflow = 'hidden';
+    
+    // 1. 检查是否已上传简历
+    console.log('3. 检查是否已上传简历:', formData.resumeUrl);
+    
+    let file: File | null = null;
+    
+    // 无论是否已上传简历，都触发文件选择
+    console.log('3. 触发文件选择对话框');
+    const fileInput = resumeInputRef.value;
+    if (!fileInput) {
+      console.error('3.1 未找到文件输入元素');
+            ElMessage.error('文件上传组件未找到');
+            smartFilling.value = false;
+            showLoadingMask.value = false;
+            // 恢复页面滚动
+            document.body.style.overflow = '';
+            return;
+    }
+    
+    console.log('3.2 触发文件选择对话框');
+    // 触发文件选择
+    fileInput.click();
+    
+    // 等待用户选择文件
+    console.log('3.3 等待用户选择文件');
+    await new Promise((resolve) => {
+      const handleFileSelect = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        if (target.files?.[0]) {
+          const selectedFile = target.files[0];
+          file = selectedFile;
+          console.log('3.4 用户选择了文件:', {
+            name: selectedFile.name,
+            size: selectedFile.size,
+            type: selectedFile.type
+          });
+          // 移除事件监听器
+          target.removeEventListener('change', handleFileSelect);
+          resolve(undefined);
+        }
+      };
+      
+      fileInput.addEventListener('change', handleFileSelect);
+      
+      // 设置超时，防止用户长时间不选择文件
+      setTimeout(() => {
+        if (!file) {
+          console.warn('3.5 用户未选择文件，操作超时');
+          fileInput.removeEventListener('change', handleFileSelect);
+          resolve(undefined);
+        }
+      }, 30000); // 30秒超时
+    });
+    
+    // 检查是否获取到文件
+    if (!file) {
+      console.warn('4. 未获取到简历文件');
+            ElMessage.warning('请选择简历文件');
+            smartFilling.value = false;
+            showLoadingMask.value = false;
+            // 恢复页面滚动
+            document.body.style.overflow = '';
+            return;
+    }
+    
+    // 使用类型断言明确指定file的类型
+    const selectedFile = file as File;
+    console.log('4. 确认获取到简历文件:', {
+      name: selectedFile.name,
+      size: selectedFile.size,
+      type: selectedFile.type
+    });
+    
+    // 2. 调用智能填充API
+    console.log('5. 准备调用智能填充API');
+    const apiFormData = new FormData();
+    apiFormData.append('file', selectedFile);
+    
+    console.log('6. 开始调用智能填充API');
+    const result = await smartFillResume(apiFormData);
+    console.log('7. 智能填充API返回结果:', result);
+    
+    if (!result.success) {
+      console.error('7.1 智能填充API调用失败:', result.errorMessage);
+            ElMessage.error(result.errorMessage || '智能填充失败');
+            smartFilling.value = false;
+            showLoadingMask.value = false;
+            // 恢复页面滚动
+            document.body.style.overflow = '';
+            return;
+    }
+    
+    console.log('7.2 智能填充API返回数据:', result);
+    
+    // 3. 填充基本信息
+    console.log('8. 开始填充基本信息');
+    if (result.name) {
+      console.log('8.1 填充姓名:', result.name);
+      formData.name = result.name;
+    }
+    if (result.gender) {
+      console.log('8.2 填充性别:', result.gender);
+      formData.gender = result.gender;
+    }
+    if (result.age) {
+      console.log('8.3 填充年龄:', result.age);
+      formData.age = result.age;
+    }
+    if (result.phone) {
+      console.log('8.4 填充电话:', result.phone);
+      formData.phone = result.phone;
+    }
+    if (result.email) {
+      console.log('8.5 填充邮箱:', result.email);
+      formData.email = result.email;
+    }
+    if (result.city) {
+      console.log('8.6 填充城市:', result.city);
+      formData.city = result.city;
+    }
+    if (result.address) {
+      console.log('8.7 填充地址:', result.address);
+      formData.address = result.address;
+    }
+    if (result.workYears) {
+      console.log('8.8 填充工作年限:', result.workYears);
+      formData.workYears = result.workYears;
+    }
+    if (result.currentSalary) {
+      console.log('8.9 填充当前薪资:', result.currentSalary);
+      formData.currentSalary = result.currentSalary;
+    }
+    if (result.expectedSalary) {
+      console.log('8.10 填充期望薪资:', result.expectedSalary);
+      formData.expectedSalary = result.expectedSalary;
+    }
+    if (result.currentStatus) {
+      console.log('8.11 填充当前状态:', result.currentStatus);
+      formData.currentStatus = result.currentStatus;
+    }
+    if (result.introduction) {
+      console.log('8.12 填充个人简介:', result.introduction.substring(0, 50) + '...');
+      formData.introduction = result.introduction;
+    }
+    
+    // 4. 填充技能标签
+    if (result.skills && result.skills.length > 0) {
+      console.log('9. 填充技能标签:', result.skills);
+      skillList.value = result.skills;
+      formData.skills = JSON.stringify(result.skills);
+    }
+    
+    // 5. 提示用户确认未填充的字段
+    if (result.unfilledFields && result.unfilledFields.length > 0) {
+      console.log('10. 未填充的字段:', result.unfilledFields);
+      ElMessage.info(`以下字段未能自动识别，请手动填写：${result.unfilledFields.join('、')}`);
+    } else {
+      console.log('10. 所有字段已成功填充');
+      ElMessage.success('智能填充成功，请检查并确认信息');
+    }
+    
+    console.log('11. 智能填充完成，最终表单数据:', {
+      name: formData.name,
+      gender: formData.gender,
+      age: formData.age,
+      phone: formData.phone,
+      email: formData.email,
+      city: formData.city,
+      workYears: formData.workYears,
+      skills: skillList.value
+    });
+    
+  } catch (error) {
+    console.error('智能填充失败:', error);
+    ElMessage.error('智能填充失败，请重试');
+  } finally {
+    console.log('=== 智能填充流程结束 ===');
+    smartFilling.value = false;
+    showLoadingMask.value = false;
+    // 恢复页面滚动
+    document.body.style.overflow = '';
+    console.log('11. 智能填充流程结束，关闭加载遮罩层');
   }
 };
 
@@ -1540,5 +1735,55 @@ onMounted(() => {
   .profile-container {
     padding: 16px;
   }
+}
+
+/* 加载遮罩层样式 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.loading-icon {
+  font-size: 48px;
+  color: #409eff;
+  animation: spin 1.5s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
+}
+
+.loading-subtext {
+  font-size: 14px;
+  color: #909399;
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

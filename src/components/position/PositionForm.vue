@@ -33,12 +33,20 @@
 
       <!-- 工作城市 -->
       <el-form-item label="工作城市" prop="city">
-        <el-input
+        <el-select
           v-model="formData.city"
-          placeholder="请输入工作城市"
-          :maxlength="20"
-          show-word-limit
-        />
+          placeholder="请选择工作城市"
+          filterable
+          clearable
+          style="width: 100%"
+        >
+          <el-option
+            v-for="city in cityOptions"
+            :key="city.value"
+            :label="city.label"
+            :value="city.value"
+          />
+        </el-select>
       </el-form-item>
 
       <!-- 工作地址 -->
@@ -191,6 +199,7 @@ import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { addPosition, updatePosition, getCompanyInfo } from '@/utils/api'
 import type { AddPositionRequest, UpdatePositionRequest, PositionInfo, CompanyInfo, EducationLevel, PositionStatus } from '@/types'
+import { CATEGORY_OPTIONS } from '@/types'
 
 interface Props {
   mode?: 'add' | 'edit'
@@ -240,84 +249,14 @@ const formData = reactive<{
   status: 0 // 默认为0（已关闭），创建后需要手动开启
 })
 
+// 城市选项
+const cityOptions = CITY_OPTIONS
+
 // 公司信息（用于填充companyId）
 const companyInfo = ref<CompanyInfo | null>(null)
 
-// 职位类别选项
-const categoryOptions = [
-  {
-    value: '技术',
-    label: '技术',
-    children: [
-      { value: '后端开发', label: '后端开发' },
-      { value: '前端开发', label: '前端开发' },
-      { value: '移动开发', label: '移动开发' },
-      { value: '测试工程师', label: '测试工程师' },
-      { value: '运维工程师', label: '运维工程师' },
-      { value: '数据开发', label: '数据开发' },
-      { value: '人工智能', label: '人工智能' },
-      { value: '产品经理', label: '产品经理' }
-    ]
-  },
-  {
-    value: '产品',
-    label: '产品',
-    children: [
-      { value: '产品经理', label: '产品经理' },
-      { value: '产品设计师', label: '产品设计师' },
-      { value: '用户研究', label: '用户研究' }
-    ]
-  },
-  {
-    value: '设计',
-    label: '设计',
-    children: [
-      { value: 'UI设计师', label: 'UI设计师' },
-      { value: '交互设计师', label: '交互设计师' },
-      { value: '平面设计师', label: '平面设计师' }
-    ]
-  },
-  {
-    value: '运营',
-    label: '运营',
-    children: [
-      { value: '产品运营', label: '产品运营' },
-      { value: '内容运营', label: '内容运营' },
-      { value: '用户运营', label: '用户运营' },
-      { value: '活动运营', label: '活动运营' },
-      { value: '新媒体运营', label: '新媒体运营' }
-    ]
-  },
-  {
-    value: '市场',
-    label: '市场',
-    children: [
-      { value: '市场推广', label: '市场推广' },
-      { value: '市场营销', label: '市场营销' },
-      { value: '品牌公关', label: '品牌公关' },
-      { value: '销售', label: '销售' }
-    ]
-  },
-  {
-    value: '职能',
-    label: '职能',
-    children: [
-      { value: '人力资源', label: '人力资源' },
-      { value: '行政', label: '行政' },
-      { value: '财务', label: '财务' },
-      { value: '法务', label: '法务' }
-    ]
-  },
-  {
-    value: '金融',
-    label: '金融',
-    children: [
-      { value: '投资', label: '投资' },
-      { value: '风控', label: '风控' },
-      { value: '审计', label: '审计' }
-    ]
-  }
-]
+// 职位类别选项（从共享常量导入）
+const categoryOptions = CATEGORY_OPTIONS
 
 // 学历选项
 const educationOptions = [

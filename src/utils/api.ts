@@ -655,3 +655,156 @@ export const getFavorites = (targetType: number) => {
 export const checkFavorite = (targetType: number, targetId: number) => {
   return toData<{ isFavorite: boolean }>(request.get('/api/favorite/check', { params: { targetType, targetId } }));
 };
+
+// ==================== 简历分析 API ====================
+
+/**
+ * 上传并分析简历
+ * @param formData - 包含简历文件的FormData
+ */
+export const uploadAndAnalyzeResume = (formData: FormData) => {
+  return toData<any>(request.post('/api/resume/upload-and-analyze', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
+  }));
+};
+
+/**
+ * 分析简历
+ * @param requestData - 简历分析请求数据
+ */
+export const analyzeResume = (requestData: any) => {
+  return toData<any>(request.post('/api/resume/analyze', requestData, {
+    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
+  }));
+};
+
+/**
+ * 智能填充简历信息
+ * @param formData - 包含简历文件的FormData
+ */
+export const smartFillResume = (formData: FormData) => {
+  return toData<any>(request.post('/api/resume/smart-fill', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
+  }));
+};
+
+// ==================== 岗位画像 API ====================
+
+/**
+ * 生成岗位画像
+ * @param positionId - 岗位ID
+ */
+export const generateJobProfile = (positionId: number) => {
+  return toData<any>(request.post(`/api/job-profile/generate/${positionId}`));
+};
+
+/**
+ * 获取岗位画像
+ * @param positionId - 岗位ID
+ */
+export const getJobProfile = (positionId: number) => {
+  return toData<any>(request.get(`/api/job-profile/${positionId}`));
+};
+
+/**
+ * 更新岗位画像
+ * @param positionId - 岗位ID
+ */
+export const updateJobProfile = (positionId: number) => {
+  return toData<any>(request.put(`/api/job-profile/update/${positionId}`));
+};
+
+/**
+ * 删除岗位画像
+ * @param positionId - 岗位ID
+ */
+export const deleteJobProfile = (positionId: number) => {
+  return toData<any>(request.delete(`/api/job-profile/${positionId}`));
+};
+
+// ==================== 人才画像 API ====================
+
+/**
+ * 生成人才画像
+ */
+export const generateTalentProfile = () => {
+  return toData<any>(request.post('/api/talent-profile/generate'));
+};
+
+/**
+ * 获取人才画像
+ */
+export const getTalentProfile = () => {
+  return toData<any>(request.get('/api/talent-profile'));
+};
+
+/**
+ * 更新人才画像
+ */
+export const updateTalentProfile = () => {
+  return toData<any>(request.put('/api/talent-profile/update'));
+};
+
+/**
+ * 删除人才画像
+ */
+export const deleteTalentProfile = () => {
+  return toData<any>(request.delete('/api/talent-profile'));
+};
+
+// ==================== 岗位推荐 API ====================
+
+/**
+ * 获取岗位推荐列表
+ * @param limit - 推荐数量限制
+ */
+export const getJobRecommendations = (limit?: number) => {
+  return toData<any>(request.get('/api/job-recommend', {
+    params: { limit }
+  }));
+};
+
+/**
+ * 获取匹配度详情
+ * @param positionId - 岗位ID
+ */
+export const getMatchDetails = (positionId: number) => {
+  return toData<any>(request.get(`/api/job-recommend/match/${positionId}`));
+};
+
+/**
+ * 批量生成匹配记录
+ */
+export const batchGenerateMatchRecords = () => {
+  return toData<any>(request.post('/api/job-recommend/batch-generate'));
+};
+
+/**
+ * 标记为已查看
+ * @param recordId - 记录ID
+ */
+export const markAsViewed = (recordId: number) => {
+  return toData<any>(request.put(`/api/job-recommend/viewed/${recordId}`));
+};
+
+// ==================== 数据统计 API ====================
+
+/**
+ * 获取求职者端统计数据
+ */
+export const getSeekerStatistics = () => {
+  return toData<any>(request.get('/api/statistics/seeker'));
+};
+
+/**
+ * 获取HR端统计数据
+ */
+export const getBossStatistics = () => {
+  return toData<any>(request.get('/api/statistics/boss'));
+};

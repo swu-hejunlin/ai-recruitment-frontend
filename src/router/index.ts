@@ -28,9 +28,9 @@ import JobSeekerProfile from '@/views/JobSeekerProfile.vue';
 import CompanyProfile from '@/views/CompanyProfile.vue';
 
 /**
- * 求职者职位发现页面
+ * 岗位发现页面（整合了推荐和搜索）
  */
-import JobDiscovery from '@/views/JobDiscovery.vue';
+import JobFinder from '@/views/JobFinder.vue';
 
 /**
  * BOSS职位管理页面
@@ -66,6 +66,16 @@ import SeekerInterviewList from '@/views/SeekerInterviewList.vue';
  * 收藏管理页面
  */
 import FavoriteManager from '@/views/FavoriteManager.vue';
+
+/**
+ * 简历分析页面
+ */
+import ResumeAnalyzer from '@/views/ResumeAnalyzer.vue';
+
+/**
+ * 数据统计页面
+ */
+import Statistics from '@/views/Statistics.vue';
 
 /**
  * BOSS职位管理页面（暂用替代方案，实际可以创建单独页面）
@@ -133,10 +143,10 @@ export const asyncRoutes: RouteRecordRaw[] = [
   },
   {
     path: '/discover',
-    name: 'JobDiscovery',
-    component: JobDiscovery,
+    name: 'JobFinder',
+    component: JobFinder,
     meta: {
-      title: '发现职位',
+      title: '岗位发现',
       requiresAuth: true,
       roles: [1] // 仅求职者
     }
@@ -197,6 +207,26 @@ export const asyncRoutes: RouteRecordRaw[] = [
     component: FavoriteManager,
     meta: {
       title: '我的收藏',
+      requiresAuth: true,
+      roles: [1, 2] // 求职者和企业HR都可访问
+    }
+  },
+  {
+    path: '/resume-analyzer',
+    name: 'ResumeAnalyzer',
+    component: ResumeAnalyzer,
+    meta: {
+      title: '简历智能分析',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
+    }
+  },
+  {
+    path: '/statistics',
+    name: 'Statistics',
+    component: Statistics,
+    meta: {
+      title: '数据统计',
       requiresAuth: true,
       roles: [1, 2] // 求职者和企业HR都可访问
     }

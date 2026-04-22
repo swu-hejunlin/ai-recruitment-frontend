@@ -97,6 +97,148 @@
 | | `GET /api/notification/unread-count` | 未读数量 |
 | | `PUT /api/notification/read` | 标记已读 |
 | | `PUT /api/notification/read-all` | 全部已读 |
+| **智能简历分析** | `POST /api/resume/upload-and-analyze` | 上传并分析简历 |
+| | `POST /api/resume/analyze` | 分析已有简历 |
+| **智能填充** | `POST /api/resume/smart-fill` | 智能填充简历信息 |
+| **岗位画像** | `POST /api/job-profile/generate/{jobId}` | 生成岗位画像 |
+| | `GET /api/job-profile/{jobId}` | 获取岗位画像 |
+| | `PUT /api/job-profile/update/{jobId}` | 更新岗位画像 |
+| | `DELETE /api/job-profile/{jobId}` | 删除岗位画像 |
+| **人才画像** | `POST /api/talent-profile/generate` | 生成人才画像 |
+| | `GET /api/talent-profile` | 获取人才画像 |
+| | `PUT /api/talent-profile/update` | 更新人才画像 |
+| | `DELETE /api/talent-profile` | 删除人才画像 |
+| **岗位推荐** | `GET /api/job-recommend` | 获取岗位推荐列表 |
+| | `GET /api/job-recommend/match/{jobId}` | 获取匹配度详情 |
+| | `POST /api/job-recommend/batch-generate` | 批量生成匹配记录 |
+| | `PUT /api/job-recommend/viewed/{recordId}` | 标记为已查看 |
+
+---
+
+## 十、岗位推荐模块
+
+### 10.1 获取岗位推荐列表
+
+- **接口地址**: `GET /api/job-recommend`
+- **接口描述**: 根据用户画像推荐匹配的岗位
+- **认证**: 需要（仅求职者角色）
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| limit | Integer | 否 | 推荐数量限制，默认10 |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": [
+    {
+      "positionId": 1,
+      "id": 1,
+      "companyId": 1,
+      "jobName": "Java开发工程师",
+      "title": "Java开发工程师",
+      "companyName": "某科技有限公司",
+      "companyLogo": "https://example.com/logo.png",
+      "city": "北京市",
+      "address": "朝阳区",
+      "salaryRange": "15-30K/月",
+      "salaryMin": 15,
+      "salaryMax": 30,
+      "educationRequire": "本科",
+      "educationMin": 3,
+      "experienceRequire": "3-5年",
+      "workYearsMin": 4,
+      "category": "后端开发",
+      "jobTags": ["互联网", "技术开发"],
+      "tags": "[\"互联网\", \"技术开发\"]",
+      "description": "负责公司核心业务系统开发...",
+      "requirement": "计算机相关专业本科以上学历...",
+      "status": 1,
+      "matchScore": 85.50,
+      "skillMatchRate": 90.00,
+      "experienceMatchRate": 80.00,
+      "educationMatchRate": 100.00,
+      "salaryMatchRate": 75.00,
+      "matchDetails": {
+        "matchedSkills": ["Java", "Spring Boot"],
+        "missingSkills": ["Redis"],
+        "matchDescription": "技能匹配度较高，经验要求满足"
+      },
+      "descriptionSummary": "负责公司核心业务系统开发...",
+      "isFavorite": false,
+      "createdAt": "2026-04-18T10:00:00"
+    }
+  ],
+  "timestamp": 1710931200000
+}
+```
+
+### 10.2 获取匹配度详情
+
+- **接口地址**: `GET /api/job-recommend/match/{positionId}`
+- **接口描述**: 获取指定岗位与当前用户的匹配度详情
+- **认证**: 需要（仅求职者角色）
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| positionId | Long | 是 | 岗位ID（路径参数） |
+
+#### 返回参数
+
+**成功响应**：与10.1获取岗位推荐列表中的单个推荐项详情相同
+
+### 10.3 批量生成匹配记录
+
+- **接口地址**: `POST /api/job-recommend/batch-generate`
+- **接口描述**: 为当前用户批量生成所有岗位的匹配记录
+- **认证**: 需要（仅求职者角色）
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": 50,
+  "timestamp": 1710931200000
+}
+```
+
+**响应说明**：
+- data表示生成的匹配记录数量
+
+### 10.4 标记匹配记录为已查看
+
+- **接口地址**: `PUT /api/job-recommend/viewed/{recordId}`
+- **接口描述**: 标记指定匹配记录为已查看状态
+- **认证**: 需要
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| recordId | Long | 是 | 匹配记录ID（路径参数） |
+
+#### 返回参数
+
+**成功响应**：
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": true,
+  "timestamp": 1710931200000
+}
+```
 
 ---
 

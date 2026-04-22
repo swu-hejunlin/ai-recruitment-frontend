@@ -101,8 +101,8 @@
               <template #title>首页</template>
             </el-menu-item>
             <el-menu-item index="/discover">
-              <el-icon><Position /></el-icon>
-              <template #title>职位</template>
+              <el-icon><MagicStick /></el-icon>
+              <template #title>岗位发现</template>
             </el-menu-item>
             <el-menu-item index="/applications">
               <el-icon><Document /></el-icon>
@@ -138,6 +138,14 @@
             <el-menu-item index="/profile">
               <el-icon><User /></el-icon>
               <template #title>我的简历</template>
+            </el-menu-item>
+            <el-menu-item index="/resume-analyzer">
+              <el-icon><DataAnalysis /></el-icon>
+              <template #title>简历分析</template>
+            </el-menu-item>
+            <el-menu-item index="/statistics">
+              <el-icon><PieChart /></el-icon>
+              <template #title>数据统计</template>
             </el-menu-item>
           </template>
 
@@ -177,6 +185,10 @@
             <el-menu-item index="/favorites">
               <el-icon><Star /></el-icon>
               <template #title>我的收藏</template>
+            </el-menu-item>
+            <el-menu-item index="/statistics">
+              <el-icon><PieChart /></el-icon>
+              <template #title>数据统计</template>
             </el-menu-item>
           </template>
           
@@ -223,7 +235,10 @@ import {
   Document,
   BellFilled,
   Message,
-  Star
+  Star,
+  DataAnalysis,
+  MagicStick,
+  PieChart
 } from '@element-plus/icons-vue';
 // 动态导入NotificationCenter组件
 const NotificationCenter = defineAsyncComponent(() => import('./NotificationCenter.vue'));

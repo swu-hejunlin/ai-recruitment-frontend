@@ -58,7 +58,7 @@
 
         <!-- 功能卡片 -->
         <div class="feature-grid">
-          <el-card class="feature-card" shadow="hover">
+          <el-card class="feature-card clickable" shadow="hover" @click="goToResumeAnalyzer">
             <div class="feature-icon">
               <el-icon :size="40" color="#00beaa"><Document /></el-icon>
             </div>
@@ -66,7 +66,7 @@
             <p>AI自动解析简历，提取关键信息</p>
           </el-card>
 
-          <el-card class="feature-card" shadow="hover">
+          <el-card class="feature-card clickable" shadow="hover" @click="goToJobDiscovery">
             <div class="feature-icon">
               <el-icon :size="40" color="#00c9b7"><TrendCharts /></el-icon>
             </div>
@@ -82,7 +82,7 @@
             <p>智能文字面试，高效筛选候选人</p>
           </el-card>
 
-          <el-card class="feature-card" shadow="hover">
+          <el-card class="feature-card clickable" shadow="hover" @click="goToStatistics">
             <div class="feature-icon">
               <el-icon :size="40" color="#009688"><DataAnalysis /></el-icon>
             </div>
@@ -106,7 +106,7 @@
               <JobCard 
                 v-for="position in hotPositions.slice(0, 4)" 
                 :key="position.id" 
-                :job="position"
+                :position="position"
                 @click="viewHotPosition(position)"
               />
             </div>
@@ -125,7 +125,7 @@
               <JobCard 
                 v-for="position in latestPositions.slice(0, 6)" 
                 :key="position.id" 
-                :job="position"
+                :position="position"
                 @click="viewLatestPosition(position)"
               />
             </div>
@@ -278,6 +278,20 @@ const goToBossPosition = () => {
  */
 const goToJobDiscovery = () => {
   router.push('/discover');
+};
+
+/**
+ * 跳转到简历智能分析页面
+ */
+const goToResumeAnalyzer = () => {
+  router.push('/resume-analyzer');
+};
+
+/**
+ * 跳转到数据统计页面
+ */
+const goToStatistics = () => {
+  router.push('/statistics');
 };
 
 /**
@@ -486,13 +500,23 @@ onMounted(() => {
 .feature-card {
   text-align: center;
   border-radius: 12px;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   border: 1px solid #ebeef5;
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+.feature-card.clickable {
+  cursor: pointer;
+}
+
+.feature-card.clickable:hover {
+  transform: translateY(-5px) scale(1.02);
+  border-color: #409eff;
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.2);
+}
+
+.feature-card.clickable:hover .feature-icon {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
 }
 
 .feature-icon {

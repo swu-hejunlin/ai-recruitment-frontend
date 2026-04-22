@@ -4,20 +4,20 @@
     <div class="card-header">
       <div class="company-info">
         <!-- 公司Logo -->
-        <div v-if="job.companyLogo" class="company-logo">
-          <el-avatar :size="48" :src="job.companyLogo" />
+        <div v-if="position.companyLogo" class="company-logo">
+          <el-avatar :size="48" :src="position.companyLogo" />
         </div>
         <div v-else class="company-logo-placeholder">
           <el-avatar :size="48" :style="{ backgroundColor: '#00beaa', color: 'white' }">
-            {{ getCompanyInitial(job.companyName || job.companyShortName || '') }}
+            {{ getCompanyInitial(position.companyName || position.companyShortName || '') }}
           </el-avatar>
         </div>
         
         <!-- 公司名称和职位标题 -->
         <div class="company-text">
-          <h3 class="job-title">{{ job.title }}</h3>
+          <h3 class="job-title">{{ position.title || position.jobName }}</h3>
           <div class="company-name">
-            {{ job.companyName || job.companyShortName || '未知公司' }}
+            {{ position.companyName }}
           </div>
         </div>
       </div>
@@ -25,26 +25,26 @@
 
     <!-- 薪资信息 -->
     <div class="salary-info">
-      <span class="salary-text">{{ formatSalary(job.salaryMin, job.salaryMax) }}</span>
+      <span class="salary-text">{{ position.salaryRange || formatSalary(position.salaryMin, position.salaryMax) }}</span>
     </div>
 
     <!-- 职位基本信息 -->
     <div class="job-meta">
       <div class="meta-item">
         <el-icon size="16"><Location /></el-icon>
-        <span class="meta-text">{{ job.city }}</span>
+        <span class="meta-text">{{ position.city || position.location }}</span>
       </div>
       <div class="meta-item">
         <el-icon size="16"><Briefcase /></el-icon>
-        <span class="meta-text">{{ job.category }}</span>
+        <span class="meta-text">{{ position.category }}</span>
       </div>
       <div class="meta-item">
         <el-icon size="16"><School /></el-icon>
-        <span class="meta-text">{{ formatEducation(job.educationMin) }}</span>
+        <span class="meta-text">{{ formatEducation(position.educationMin) }}</span>
       </div>
       <div class="meta-item">
         <el-icon size="16"><Clock /></el-icon>
-        <span class="meta-text">{{ formatTime(job.createTime) }}</span>
+        <span class="meta-text">{{ formatTime(position.createTime) }}</span>
       </div>
     </div>
 
@@ -88,7 +88,7 @@ import type { PositionInfo, EducationLevel } from '../../types'
 import { addFavorite, removeFavorite, checkFavorite } from '../../utils/api'
 
 interface Props {
-  job: PositionInfo
+  position: PositionInfo
 }
 
 const props = defineProps<Props>()
@@ -103,8 +103,11 @@ const isFavorite = ref(false)
 // 检查收藏状态
 const checkFavoriteStatus = async () => {
   try {
-    const response = await checkFavorite(1, props.job.id)
-    isFavorite.value = response.isFavorite
+    const positionId = props.position.id || props.position.positionId
+    if (positionId) {
+      const response = await checkFavorite(1, positionId)
+      isFavorite.value = response.isFavorite
+    }
   } catch (error) {
     console.error('检查收藏状态失败:', error)
   }
@@ -113,13 +116,16 @@ const checkFavoriteStatus = async () => {
 // 处理收藏操作
 const handleFavorite = async () => {
   try {
+    const positionId = props.position.id || props.position.positionId
+    if (!positionId) return
+    
     if (isFavorite.value) {
       // 取消收藏
-      await removeFavorite(1, props.job.id)
+      await removeFavorite(1, positionId)
       isFavorite.value = false
     } else {
       // 添加收藏
-      await addFavorite(1, props.job.id)
+      await addFavorite(1, positionId)
       isFavorite.value = true
     }
   } catch (error) {
@@ -134,9 +140,12 @@ onMounted(() => {
 
 // 解析标签列表
 const tags = computed(() => {
-  if (!props.job.tags) return []
+  if (props.position.jobTags) {
+    return props.position.jobTags
+  }
+  if (!props.position.tags) return []
   try {
-    return JSON.parse(props.job.tags)
+    return JSON.parse(props.position.tags)
   } catch {
     return []
   }
@@ -160,8 +169,16 @@ const formatEducation = (level: EducationLevel): string => {
 
 // 格式化发布时间
 const formatTime = (dateStr: string): string => {
+  if (!dateStr) return '未知'
+  
   const now = new Date()
   const date = new Date(dateStr)
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '未知'
+  }
+  
   const diffTime = Math.abs(now.getTime() - date.getTime())
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   
@@ -232,32 +249,32 @@ const handleViewDetail = (e: Event) => {
     }
 
     .company-text {
-      flex: 1;
+        flex: 1;
 
-      .job-title {
-        margin: 0 0 8px 0;
-        font-size: 18px;
-        font-weight: 600;
-        color: #222;
-        line-height: 1.4;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        display: -moz-box;
-        -moz-line-clamp: 2;
-        -moz-box-orient: vertical;
-        display: box;
-        line-clamp: 2;
-        box-orient: vertical;
-        overflow: hidden;
-      }
+        .job-title {
+          margin: 0 0 8px 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #222;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          display: -moz-box;
+          -moz-line-clamp: 2;
+          -moz-box-orient: vertical;
+          display: box;
+          line-clamp: 2;
+          box-orient: vertical;
+          overflow: hidden;
+        }
 
-      .company-name {
-        font-size: 14px;
-        color: #666;
-        font-weight: 500;
+        .company-name {
+          font-size: 14px;
+          color: #666;
+          font-weight: 500;
+        }
       }
-    }
   }
 }
 

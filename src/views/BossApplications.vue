@@ -131,7 +131,7 @@
                         {{ row.jobSeeker.workYears }}年经验
                       </el-tag>
                       <el-tag size="small" v-if="row.jobSeeker?.expectedSalary" type="warning">
-                        {{ row.jobSeeker.expectedSalary }}万/年
+                        {{ row.jobSeeker.expectedSalary }}K/月
                       </el-tag>
                     </div>
                   </div>

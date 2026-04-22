@@ -27,7 +27,6 @@
         style="width: 100%"
         :border="true"
       >
-        <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="title" label="职位名称" min-width="200">
           <template #default="{ row }">
             <div class="position-title">
