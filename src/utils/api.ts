@@ -808,3 +808,70 @@ export const getSeekerStatistics = () => {
 export const getBossStatistics = () => {
   return toData<any>(request.get('/api/statistics/boss'));
 };
+
+/**
+ * 获取词云数据
+ */
+export const getWordCloudData = () => {
+  return toData<any>(request.get('/api/statistics/wordcloud'));
+};
+
+/**
+ * 提交模拟面试视频
+ */
+export const submitMockInterview = (formData: FormData, interviewId?: number, sessionKey?: string) => {
+  return toData<any>(request.post('/api/interview/mock', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    params: { ...(interviewId && { interviewId }), ...(sessionKey && { sessionKey }) }
+  }));
+};
+
+/**
+ * 生成模拟面试题
+ */
+export const generateMockInterviewQuestions = (
+  interviewId?: number,
+  positionName?: string,
+  positionCategory?: string,
+  city?: string,
+  description?: string,
+  requirement?: string
+) => {
+  return toData<any>(request.get('/api/interview/mock/questions', {
+    params: { 
+      interviewId, 
+      positionName,
+      positionCategory,
+      city,
+      description,
+      requirement
+    }
+  }));
+};
+
+/**
+ * 结束真实AI面试
+ */
+export const finishInterview = (formData: FormData) => {
+  return toData<any>(request.post('/api/interview/finish', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }));
+};
+
+/**
+ * 获取面试评估结果
+ */
+export const getInterviewEvaluation = (interviewId: number) => {
+  return toData<any>(request.get(`/api/interview/evaluation/${interviewId}`));
+};
+
+/**
+ * 检查面试评估结果是否存在
+ */
+export const checkInterviewEvaluationExists = (interviewId: number) => {
+  return toData<any>(request.get(`/api/interview/evaluation/${interviewId}/exists`));
+};

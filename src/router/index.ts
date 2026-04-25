@@ -78,6 +78,13 @@ import ResumeAnalyzer from '@/views/ResumeAnalyzer.vue';
 import Statistics from '@/views/Statistics.vue';
 
 /**
+ * 模拟面试页面
+ */
+// 面试相关页面
+import MockInterview from '@/views/mock-interview/MockInterview.vue';
+import RealInterview from '@/views/mock-interview/RealInterview.vue';
+
+/**
  * BOSS职位管理页面（暂用替代方案，实际可以创建单独页面）
  * 我们直接在CompanyProfile中包含职位管理功能
  */
@@ -229,6 +236,26 @@ export const asyncRoutes: RouteRecordRaw[] = [
       title: '数据统计',
       requiresAuth: true,
       roles: [1, 2] // 求职者和企业HR都可访问
+    }
+  },
+  {
+    path: '/mock-interview',
+    name: 'MockInterview',
+    component: MockInterview,
+    meta: {
+      title: '模拟面试',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
+    }
+  },
+  {
+    path: '/real-interview',
+    name: 'RealInterview',
+    component: RealInterview,
+    meta: {
+      title: 'AI面试',
+      requiresAuth: true,
+      roles: [1] // 仅求职者
     }
   }
 ];

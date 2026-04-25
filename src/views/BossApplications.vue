@@ -34,12 +34,11 @@
                   @change="handleFilterStatusChange"
                 >
                   <el-option label="全部" value="" />
-                  <el-option
-                    v-for="(label, value) in APPLICATION_STATUS_MAP"
-                    :key="value"
-                    :label="label"
-                    :value="value"
-                  />
+                  <el-option label="待查看" value="1" />
+                  <el-option label="已查看" value="2" />
+                  <el-option label="面试中" value="3" />
+                  <el-option label="不合适" value="4" />
+                  <el-option label="录用" value="5" />
                 </el-select>
               </div>
 
@@ -178,20 +177,14 @@
               </template>
             </el-table-column>
 
-            <el-table-column label="AI评分" width="100" align="center">
+            <el-table-column label="AI评分" width="90" align="center">
               <template #default="{ row }">
                 <div v-if="row.aiScore !== null && row.aiScore !== undefined" class="ai-score">
-                  <el-rate
-                    v-model="row.aiScore"
-                    disabled
-                    allow-half
-                    :max="5"
-                    :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-                    text-color="#ff9900"
-                  />
-                  <span class="score-value">{{ row.aiScore.toFixed(1) }}</span>
+                  <span class="score-number" :class="getScoreClass(row.aiScore)">
+                    {{ row.aiScore.toFixed(1) }}
+                  </span>
                 </div>
-                <span v-else class="no-score">待评估</span>
+                <span v-else class="no-score">—</span>
               </template>
             </el-table-column>
 
@@ -201,7 +194,7 @@
               </template>
             </el-table-column>
 
-            <el-table-column label="操作" width="450" align="center" fixed="right">
+            <el-table-column label="操作" width="500" align="center" fixed="right">
               <template #default="{ row }">
                 <div class="action-buttons">
                   <el-button
@@ -247,7 +240,7 @@
                     size="small"
                     trigger="click"
                     @command="(command: string) => handleStatusChangeMenu(row, command)"
-                    :disabled="loadingStatusChange"
+                    :disabled="loadingStatusChange || [3, 4, 5].includes(row.status)"
                   >
                     <el-button type="info" size="small" plain>
                       更新状态
@@ -256,12 +249,25 @@
                     <template #dropdown>
                       <el-dropdown-menu>
                         <el-dropdown-item
-                          v-for="(label, value) in APPLICATION_STATUS_MAP"
-                          :key="value"
-                          :command="value"
-                          :disabled="row.status === parseInt(value)"
+                          :key="3"
+                          :command="'3'"
+                          :disabled="row.status === 3"
                         >
-                          {{ label }}
+                          发起面试
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          :key="4"
+                          :command="'4'"
+                          :disabled="row.status === 4"
+                        >
+                          不合适
+                        </el-dropdown-item>
+                        <el-dropdown-item
+                          :key="5"
+                          :command="'5'"
+                          :disabled="row.status === 5"
+                        >
+                          录用
                         </el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
@@ -502,7 +508,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox, ElIcon } from 'element-plus'
 import { Refresh, Search, Loading, Location, ArrowDown, Document, Star } from '@element-plus/icons-vue'
 import AppLayout from '../components/AppLayout.vue'
 import ApplicationDetailDialog from '../components/application/ApplicationDetailDialog.vue'
@@ -521,6 +528,7 @@ import {
 import type { ApplicationInfo, ApplicationStatus, JobSeekerFromApplication, PositionFromApplication } from '../types'
 import { APPLICATION_STATUS_MAP } from '../types'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 // 筛选项
@@ -603,6 +611,21 @@ const fetchApplications = async () => {
     
     const records = response.records || []
     
+    // 收集未查看的投递记录ID
+    const unreadApplicationIds = records.filter(record => record.status === 1).map(record => record.id)
+    
+    // 批量标记为已查看
+    if (unreadApplicationIds.length > 0) {
+      try {
+        for (const id of unreadApplicationIds) {
+          await markApplicationAsRead(id)
+        }
+        console.log(`已自动标记 ${unreadApplicationIds.length} 条投递记录为已查看`)
+      } catch (error) {
+        console.error('批量标记已查看失败:', error)
+      }
+    }
+    
     const enhancedRecords = await Promise.all(records.map(async (record: ApplicationInfo) => {
       // 检查是否已收藏该求职者
       let isFavorite = false
@@ -613,8 +636,12 @@ const fetchApplications = async () => {
         console.error('检查收藏状态失败:', error)
       }
       
+      // 如果是未查看状态，更新为已查看
+      const status = record.status === 1 ? 2 : record.status
+      
       return {
         ...record,
+        status,
         jobSeekerName: record.jobSeekerName || `求职者-${record.jobSeekerId}`,
         positionTitle: record.positionTitle || `职位-${record.positionId}`,
         companyName: record.companyName || `公司-${record.companyId}`,
@@ -639,18 +666,6 @@ const fetchApplications = async () => {
 const viewApplicationDetail = async (application: ApplicationInfo) => {
   selectedApplication.value = application
   detailDialogVisible.value = true
-  
-  // 标记为已查看
-  if (application.status === 1) {
-    try {
-      await markApplicationAsRead(application.id)
-      application.status = 2
-      // 立即刷新全局计数
-      userStore.refreshCounts()
-    } catch (error) {
-      console.error('标记已查看失败:', error)
-    }
-  }
 }
 
 // 查看求职者信息
@@ -662,18 +677,6 @@ const viewJobSeekerInfo = async (applicationId: number) => {
     
     const response = await getJobSeekerSimpleFromApplication(applicationId)
     jobSeekerInfo.value = response
-    
-    // 标记为已查看
-    if (app && app.status === 1) {
-      try {
-        await markApplicationAsRead(applicationId)
-        app.status = 2
-        // 立即刷新全局计数
-        userStore.refreshCounts()
-      } catch (error) {
-        console.error('标记已查看失败:', error)
-      }
-    }
     
     jobSeekerDialogVisible.value = true
   } catch (error) {
@@ -716,18 +719,31 @@ const handleFilterStatusChange = () => {
 
 // 更新投递状态
 const handleStatusChangeMenu = async (application: ApplicationInfo, newStatus: string) => {
+  const statusCode = parseInt(newStatus)
+  
+  // 发起面试操作：跳转到面试管理页面
+  if (statusCode === 3) {
+    router.push({
+      path: '/boss/interviews',
+      query: { applicationId: application.id.toString() }
+    })
+    return
+  }
+  
+  // 不合适和录用操作：直接更新状态
   try {
     loadingStatusChange.value = true
     
+    const statusLabel = statusCode === 4 ? '不合适' : '录用'
     await ElMessageBox.confirm(
-      `确定要将"${application.jobSeekerName || '该求职者'}"的投递状态更新为"${APPLICATION_STATUS_MAP[parseInt(newStatus) as ApplicationStatus]}"吗？`,
+      `确定要将"${application.jobSeekerName || '该求职者'}"的投递状态更新为"${statusLabel}"吗？`,
       '确认更新',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     )
     
     await updateApplicationStatus({
       id: application.id,
-      status: parseInt(newStatus) as ApplicationStatus
+      status: statusCode as ApplicationStatus
     })
     
     ElMessage.success('投递状态更新成功')
@@ -738,7 +754,7 @@ const handleStatusChangeMenu = async (application: ApplicationInfo, newStatus: s
     // 更新本地数据
     const index = tableData.value.findIndex(item => item.id === application.id)
     if (index !== -1) {
-      tableData.value[index].status = parseInt(newStatus) as ApplicationStatus
+      tableData.value[index].status = statusCode as ApplicationStatus
     }
     
   } catch (error) {
@@ -812,6 +828,14 @@ const getStatusTagType = (status: ApplicationStatus): string => {
     5: 'success'    // 录用 - 绿色
   }
   return typeMap[status] || ''
+}
+
+// 根据AI评分返回不同的样式类
+const getScoreClass = (score: number): string => {
+  if (score >= 4.5) return 'score-excellent'   // 优秀 - 深绿色
+  if (score >= 4.0) return 'score-good'         // 良好 - 绿色
+  if (score >= 3.0) return 'score-average'      // 一般 - 橙色
+  return 'score-poor'                          // 较差 - 红色
 }
 
 
@@ -1127,15 +1151,43 @@ onMounted(() => {
 
 .ai-score {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 }
 
-.score-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ff9900;
+.score-number {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: 'Trebuchet MS', 'Arial Black', sans-serif;
+  letter-spacing: -1px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  min-width: 42px;
+  text-align: center;
+}
+
+.score-excellent {
+  color: #fff;
+  background: linear-gradient(135deg, #00c853 0%, #2e7d32 100%);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.score-good {
+  color: #fff;
+  background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.score-average {
+  color: #fff;
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.score-poor {
+  color: #fff;
+  background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .no-score {

@@ -16,7 +16,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 /**
  * 请求超时时间（毫秒）
  */
-const REQUEST_TIMEOUT = 30000;
+const REQUEST_TIMEOUT = 300000; // 5分钟，足够完成视频上传和AI分析
 
 // ==================== 创建 Axios 实例 ====================
 const request = axios.create({

@@ -148,6 +148,25 @@
               </el-card>
             </el-col>
           </el-row>
+
+          <el-row :gutter="20" class="wordcloud-section">
+            <el-col :span="24">
+              <el-card class="wordcloud-card">
+                <template #header>
+                  <div class="card-header">
+                    <span><el-icon><TrendCharts /></el-icon> 热门词云</span>
+                    <el-radio-group v-model="wordcloudType" size="small" @change="updateWordcloud">
+                      <el-radio-button label="skills">热门技能</el-radio-button>
+                      <el-radio-button label="positions">热门岗位</el-radio-button>
+                      <el-radio-button label="requirements">招聘要求</el-radio-button>
+                    </el-radio-group>
+                  </div>
+                </template>
+                <div ref="wordcloudRef" class="wordcloud-container"></div>
+                <el-empty v-if="!currentWordcloudData?.length" description="暂无词云数据" :image-size="60" />
+              </el-card>
+            </el-col>
+          </el-row>
         </div>
 
         <div v-else class="boss-stats">
@@ -254,13 +273,32 @@
               </el-card>
             </el-col>
           </el-row>
+
+          <el-row :gutter="20" class="wordcloud-section">
+            <el-col :span="24">
+              <el-card class="wordcloud-card">
+                <template #header>
+                  <div class="card-header">
+                    <span><el-icon><TrendCharts /></el-icon> 热门词云</span>
+                    <el-radio-group v-model="wordcloudType" size="small" @change="updateWordcloud">
+                      <el-radio-button label="skills">热门技能</el-radio-button>
+                      <el-radio-button label="positions">热门岗位</el-radio-button>
+                      <el-radio-button label="requirements">招聘要求</el-radio-button>
+                    </el-radio-group>
+                  </div>
+                </template>
+                <div ref="wordcloudRef" class="wordcloud-container"></div>
+                <el-empty v-if="!currentWordcloudData?.length" description="暂无词云数据" :image-size="60" />
+              </el-card>
+            </el-col>
+          </el-row>
         </div>
       </div>
     </div>
   </AppLayout>
 </template>
 <script setup lang="ts">
-import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -279,14 +317,18 @@ import {
   DataAnalysis,
   ArrowLeft
 } from '@element-plus/icons-vue'
-import { getSeekerStatistics, getBossStatistics } from '@/utils/api'
+import * as echarts from 'echarts'
+import 'echarts-wordcloud'
+import { getSeekerStatistics, getBossStatistics, getWordCloudData } from '@/utils/api'
 import { useUserStore } from '@/stores/userStore'
 
 const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'))
 const router = useRouter()
 const userStore = useUserStore()
-const isHR = computed(() => userStore.role === 2)
+const isHR = computed(() => userStore.isHR)
 const loading = ref(false)
+const wordcloudRef = ref<HTMLElement>()
+let wordcloudChart: echarts.ECharts | null = null
 
 const seekerStats = ref({
   totalPositions: 0,
@@ -310,6 +352,17 @@ const bossStats = ref({
   positionStats: []
 })
 
+const wordcloudType = ref('skills')
+const wordcloudData = ref({
+  skills: [],
+  positions: [],
+  requirements: []
+})
+
+const currentWordcloudData = computed(() => {
+  return wordcloudData.value[wordcloudType.value] || []
+})
+
 const getCompetitionLevel = (index) => {
   if (!index) return '数据不足'
   if (index < 2) return '竞争较低'
@@ -325,6 +378,76 @@ const getCompetitionType = (index) => {
   return 'danger'
 }
 
+const getWordcloudColors = () => {
+  return [
+    '#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399',
+    '#06b6d4', '#8b5cf6', '#ec4899', '#10b981', '#3b82f6'
+  ]
+}
+
+const initWordcloud = () => {
+  if (!wordcloudRef.value) return
+  
+  wordcloudChart = echarts.init(wordcloudRef.value)
+  
+  wordcloudChart.setOption({
+    tooltip: {
+      show: true,
+      formatter: (params: any) => {
+        return `${params.name}: ${params.value}`
+      }
+    },
+    series: [{
+      type: 'wordCloud',
+      shape: 'circle',
+      left: 'center',
+      top: 'center',
+      width: '90%',
+      height: '90%',
+      right: null,
+      bottom: null,
+      sizeRange: [14, 50],
+      rotationRange: [-45, 45],
+      gridSize: 8,
+      drawOutOfBound: false,
+      textStyle: {
+        fontFamily: 'sans-serif',
+        fontWeight: 'bold',
+        color: () => {
+          const colors = getWordcloudColors()
+          return colors[Math.floor(Math.random() * colors.length)]
+        }
+      },
+      emphasis: {
+        textStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.3)'
+        }
+      },
+      data: []
+    }]
+  })
+  
+  wordcloudChart.on('click', (params: any) => {
+    ElMessage.info(`点击了: ${params.name}`)
+  })
+}
+
+const updateWordcloud = () => {
+  if (!wordcloudChart) return
+  
+  const data = currentWordcloudData.value.map((item: any) => ({
+    name: item.name,
+    value: item.value
+  }))
+  
+  wordcloudChart.setOption({
+    series: [{
+      data: data
+    }]
+  })
+}
+
 const fetchStatistics = async () => {
   loading.value = true
   try {
@@ -335,6 +458,15 @@ const fetchStatistics = async () => {
       const response = await getSeekerStatistics()
       seekerStats.value = response || {}
     }
+    
+    const wordcloudResponse = await getWordCloudData()
+    wordcloudData.value = wordcloudResponse || { skills: [], positions: [], requirements: [] }
+    
+    await nextTick()
+    if (!wordcloudChart) {
+      initWordcloud()
+    }
+    updateWordcloud()
   } catch (error) {
     console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败，请稍后重试')
@@ -343,12 +475,29 @@ const fetchStatistics = async () => {
   }
 }
 
+const handleResize = () => {
+  wordcloudChart?.resize()
+}
+
 const goBack = () => {
   router.back()
 }
 
 onMounted(() => {
   fetchStatistics()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  if (wordcloudChart) {
+    wordcloudChart.dispose()
+    wordcloudChart = null
+  }
+  window.removeEventListener('resize', handleResize)
+})
+
+watch(wordcloudType, () => {
+  updateWordcloud()
 })
 </script>
 <style scoped lang="scss">
@@ -638,5 +787,40 @@ onMounted(() => {
     color: #67c23a;
     margin: 0 8px;
   }
+}
+
+.wordcloud-section {
+  margin-bottom: 20px;
+}
+
+.wordcloud-card {
+  border-radius: 12px;
+  overflow: hidden;
+
+  :deep(.el-card__header) {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+  }
+
+  .card-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .el-icon {
+      margin-right: 8px;
+      color: #409eff;
+    }
+  }
+}
+
+.wordcloud-container {
+  width: 100%;
+  height: 400px;
+  padding: 20px 0;
 }
 </style>

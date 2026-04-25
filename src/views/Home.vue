@@ -8,13 +8,16 @@
     <div class="home-container">
       <!-- 页面标题和状态 -->
       <div class="page-header">
-        <h2>智能招聘平台</h2>
+        <h2 class="page-title">
+          <span class="title-text">AI智能招聘系统</span>
+          <span class="title-subtext">Intelligent Recruitment Platform</span>
+        </h2>
         <div class="user-status">
           <span class="status-label">当前用户:</span>
           <span class="status-value">{{ userStore.userInfo?.phone || '未登录' }}</span>
           <span class="status-separator">|</span>
           <span class="status-label">角色:</span>
-          <span class="status-value">{{ userStore.userInfo?.role === 1 ? '牛人' : userStore.userInfo?.role === 2 ? 'boss' : '未设置' }}</span>
+          <span class="status-value">{{ userStore.userInfo?.role === 1 ? '求职者' : userStore.userInfo?.role === 2 ? '招聘方' : '未设置' }}</span>
         </div>
       </div>
       
@@ -31,23 +34,37 @@
         <el-card class="welcome-card" shadow="hover">
           <div class="welcome-content">
             <div class="welcome-left">
-              <h2>{{ getWelcomeTitle() }}</h2>
-              <p>{{ getWelcomeSubtitle() }}</p>
+              <h2 class="welcome-title">{{ getWelcomeTitle() }}</h2>
+              <p class="welcome-subtitle">{{ getWelcomeSubtitle() }}</p>
+              <div class="welcome-features">
+                <div class="feature-item">
+                  <el-icon color="#409eff"><MagicStick /></el-icon>
+                  <span>AI智能匹配</span>
+                </div>
+                <div class="feature-item">
+                  <el-icon color="#00beaa"><DataAnalysis /></el-icon>
+                  <span>智能数据分析</span>
+                </div>
+                <div class="feature-item">
+                  <el-icon color="#722ed1"><VideoCamera /></el-icon>
+                  <span>AI视频面试</span>
+                </div>
+              </div>
             </div>
             <div class="welcome-right">
-              <el-button type="primary" size="large" @click="goToProfile">
+              <el-button type="primary" size="large" @click="goToProfile" class="welcome-button">
                 <el-icon><Edit /></el-icon>
                 {{ getProfileButtonText() }}
               </el-button>
               <!-- 根据角色显示快捷入口 -->
               <template v-if="userStore.userInfo?.role === 2">
-                <el-button type="success" size="large" @click="goToBossPosition" style="margin-left: 12px">
+                <el-button type="success" size="large" @click="goToBossPosition" style="margin-left: 12px" class="welcome-button">
                   <el-icon><Position /></el-icon>
                   职位管理
                 </el-button>
               </template>
               <template v-if="userStore.userInfo?.role === 1">
-                <el-button type="success" size="large" @click="goToJobDiscovery" style="margin-left: 12px">
+                <el-button type="success" size="large" @click="goToJobDiscovery" style="margin-left: 12px" class="welcome-button">
                   <el-icon><Search /></el-icon>
                   发现职位
                 </el-button>
@@ -59,35 +76,35 @@
         <!-- 功能卡片 -->
         <div class="feature-grid">
           <el-card class="feature-card clickable" shadow="hover" @click="goToResumeAnalyzer">
-            <div class="feature-icon">
-              <el-icon :size="40" color="#00beaa"><Document /></el-icon>
+            <div class="feature-icon ai-icon-resume">
+              <el-icon :size="40" color="#409eff"><Document /></el-icon>
             </div>
-            <h3>智能简历解析</h3>
-            <p>AI自动解析简历，提取关键信息</p>
+            <h3 class="feature-title">AI简历智能解析</h3>
+            <p class="feature-description">AI自动识别简历关键信息，智能提取技能和经验</p>
           </el-card>
 
           <el-card class="feature-card clickable" shadow="hover" @click="goToJobDiscovery">
-            <div class="feature-icon">
-              <el-icon :size="40" color="#00c9b7"><TrendCharts /></el-icon>
+            <div class="feature-icon ai-icon-match">
+              <el-icon :size="40" color="#00beaa"><TrendCharts /></el-icon>
             </div>
-            <h3>智能匹配推荐</h3>
-            <p>基于AI算法，精准匹配岗位和人才</p>
+            <h3 class="feature-title">AI智能匹配推荐</h3>
+            <p class="feature-description">基于深度学习算法，精准匹配岗位与人才</p>
           </el-card>
 
-          <el-card class="feature-card" shadow="hover">
-            <div class="feature-icon">
-              <el-icon :size="40" color="#00a896"><ChatLineRound /></el-icon>
+          <el-card class="feature-card clickable" shadow="hover" @click="goToMockInterview">
+            <div class="feature-icon ai-icon-interview">
+              <el-icon :size="40" color="#722ed1"><VideoCamera /></el-icon>
             </div>
-            <h3>AI面试助手</h3>
-            <p>智能文字面试，高效筛选候选人</p>
+            <h3 class="feature-title">AI视频面试</h3>
+            <p class="feature-description">智能视频面试评估，提升招聘效率</p>
           </el-card>
 
           <el-card class="feature-card clickable" shadow="hover" @click="goToStatistics">
-            <div class="feature-icon">
-              <el-icon :size="40" color="#009688"><DataAnalysis /></el-icon>
+            <div class="feature-icon ai-icon-analysis">
+              <el-icon :size="40" color="#fa8c16"><DataAnalysis /></el-icon>
             </div>
-            <h3>数据分析</h3>
-            <p>可视化数据展示，洞察招聘趋势</p>
+            <h3 class="feature-title">AI数据分析</h3>
+            <p class="feature-description">智能数据洞察，预测招聘趋势</p>
           </el-card>
         </div>
 
@@ -148,7 +165,7 @@ import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { useUserStore } from '../stores/userStore';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Document, TrendCharts, ChatLineRound, DataAnalysis, Edit, Position, Search, Clock, ArrowRight, Location } from '@element-plus/icons-vue';
+import { Document, TrendCharts, ChatLineRound, DataAnalysis, Edit, Position, Search, Clock, ArrowRight, Location, VideoCamera, MagicStick } from '@element-plus/icons-vue';
 // 动态导入组件
 const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'));
 const JobCard = defineAsyncComponent(() => import('../components/position/JobCard.vue'));
@@ -295,6 +312,13 @@ const goToStatistics = () => {
 };
 
 /**
+ * 跳转到AI面试页面
+ */
+const goToMockInterview = () => {
+  router.push('/mock-interview');
+};
+
+/**
  * 查看热门职位详情
  */
 const viewHotPosition = (position: PositionInfo) => {
@@ -436,11 +460,28 @@ onMounted(() => {
   align-items: flex-end;
 }
 
-.page-header h2 {
-  font-size: 24px;
+.page-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title-text {
+  font-size: 28px;
   font-weight: 700;
   color: #303133;
-  margin: 0;
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1px;
+}
+
+.title-subtext {
+  font-size: 14px;
+  color: #909399;
+  font-weight: 400;
+  letter-spacing: 2px;
 }
 
 .user-status {
@@ -448,6 +489,10 @@ onMounted(() => {
   color: #909399;
   display: flex;
   align-items: center;
+  background: rgba(64, 158, 255, 0.05);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(64, 158, 255, 0.1);
 }
 
 .status-value {
@@ -464,44 +509,128 @@ onMounted(() => {
 /* ==================== 欢迎卡片 ==================== */
 .welcome-card {
   margin-bottom: 24px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: none;
   background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.1);
+  border: 1px solid rgba(64, 158, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.welcome-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #409eff 0%, #00beaa 100%);
 }
 
 .welcome-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px;
+  align-items: flex-start;
+  padding: 32px;
+  gap: 40px;
 }
 
-.welcome-left h2 {
-  font-size: 22px;
-  margin-bottom: 8px;
+.welcome-left {
+  flex: 1;
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
   color: #303133;
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.welcome-left p {
-  font-size: 15px;
+.welcome-subtitle {
+  font-size: 16px;
   color: #606266;
-  margin: 0;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.welcome-features {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(64, 158, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid rgba(64, 158, 255, 0.1);
+  font-size: 14px;
+  color: #606266;
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  background: rgba(64, 158, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
+}
+
+.welcome-right {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.welcome-button {
+  min-width: 160px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 24px;
+  transition: all 0.3s ease;
+}
+
+.welcome-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
 }
 
 /* ==================== 功能网格 ==================== */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
   margin-bottom: 32px;
 }
 
 .feature-card {
   text-align: center;
-  border-radius: 12px;
+  border-radius: 16px;
   transition: all 0.3s ease;
-  border: 1px solid #ebeef5;
+  border: 1px solid rgba(64, 158, 255, 0.1);
+  background: var(--ai-bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ai-primary) 0%, var(--ai-secondary) 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
 }
 
 .feature-card.clickable {
@@ -509,34 +638,64 @@ onMounted(() => {
 }
 
 .feature-card.clickable:hover {
-  transform: translateY(-5px) scale(1.02);
+  transform: translateY(-8px) scale(1.02);
   border-color: #409eff;
-  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 12px 32px rgba(64, 158, 255, 0.2);
+}
+
+.feature-card.clickable:hover::before {
+  transform: scaleX(1);
 }
 
 .feature-card.clickable:hover .feature-icon {
-  transform: scale(1.1);
-  transition: transform 0.3s ease;
+  transform: scale(1.1) rotate(5deg);
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.2);
 }
 
 .feature-icon {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   display: inline-flex;
-  padding: 12px;
-  border-radius: 12px;
-  background-color: #f0f9f8;
+  padding: 20px;
+  border-radius: 50%;
+  background-color: rgba(64, 158, 255, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
-.feature-card h3 {
+.ai-icon-resume {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(64, 158, 255, 0.05) 100%);
+}
+
+.ai-icon-match {
+  background: linear-gradient(135deg, rgba(0, 190, 170, 0.1) 0%, rgba(0, 190, 170, 0.05) 100%);
+}
+
+.ai-icon-interview {
+  background: linear-gradient(135deg, rgba(114, 46, 209, 0.1) 0%, rgba(114, 46, 209, 0.05) 100%);
+}
+
+.ai-icon-analysis {
+  background: linear-gradient(135deg, rgba(250, 140, 22, 0.1) 0%, rgba(250, 140, 22, 0.05) 100%);
+}
+
+.feature-title {
   font-size: 18px;
-  margin-bottom: 10px;
+  font-weight: 700;
+  margin-bottom: 12px;
   color: #303133;
+  position: relative;
+  z-index: 1;
 }
 
-.feature-card p {
+.feature-description {
   font-size: 14px;
-  color: #909399;
+  color: #606266;
   line-height: 1.5;
+  padding: 0 16px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==================== 推荐职位板块 ==================== */
@@ -544,41 +703,50 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(64, 158, 255, 0.1);
 }
 
 .section-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #303133;
   margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .section-subtitle {
   font-size: 14px;
-  color: #909399;
+  color: #606266;
+  font-weight: 500;
 }
 
 /* 职位网格布局 */
 .hot-positions-grid, .latest-positions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
   margin-bottom: 24px;
 }
 
 .position-card {
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(64, 158, 255, 0.1);
 }
 
 .position-card:hover {
   border-color: #409eff;
-  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.15);
+  transform: translateY(-4px);
 }
 
 .position-header {
@@ -593,12 +761,21 @@ onMounted(() => {
   font-weight: 600;
   color: #303133;
   margin: 0;
+  transition: color 0.3s ease;
+}
+
+.position-card:hover .position-title {
+  color: #409eff;
 }
 
 .position-salary {
   font-size: 16px;
   font-weight: 700;
   color: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c 0%, #fa8c16 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .company-info {
@@ -623,18 +800,43 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
+.position-tags .el-tag {
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  transition: all 0.3s ease;
+}
+
+.position-card:hover .position-tags .el-tag {
+  background: rgba(64, 158, 255, 0.1) !important;
+  color: #409eff !important;
+  border-color: rgba(64, 158, 255, 0.3) !important;
+}
+
 .position-meta {
   font-size: 12px;
   color: #909399;
   margin-top: 12px;
-  border-top: 1px solid #f2f6fc;
+  border-top: 1px solid rgba(64, 158, 255, 0.1);
   padding-top: 12px;
 }
 
 .more-positions-link {
   text-align: center;
-  margin-top: 10px;
+  margin-top: 20px;
   margin-bottom: 40px;
+}
+
+.more-positions-link .el-button {
+  border-radius: 20px;
+  padding: 8px 24px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.more-positions-link .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
 }
 
 .loading-wrapper {

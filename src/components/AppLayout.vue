@@ -145,7 +145,11 @@
             </el-menu-item>
             <el-menu-item index="/statistics">
               <el-icon><PieChart /></el-icon>
-              <template #title>数据统计</template>
+              <template #title>趋势洞悉</template>
+            </el-menu-item>
+            <el-menu-item index="/mock-interview">
+              <el-icon><VideoCamera /></el-icon>
+              <template #title>AI面试</template>
             </el-menu-item>
           </template>
 
@@ -238,7 +242,8 @@ import {
   Star,
   DataAnalysis,
   MagicStick,
-  PieChart
+  PieChart,
+  VideoCamera
 } from '@element-plus/icons-vue';
 // 动态导入NotificationCenter组件
 const NotificationCenter = defineAsyncComponent(() => import('./NotificationCenter.vue'));
@@ -468,7 +473,7 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: 700;
   margin-left: 10px;
-  background: linear-gradient(135deg, #00beaa 0%, #00a896 100%);
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -535,13 +540,19 @@ onUnmounted(() => {
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #00beaa 0%, #00a896 100%);
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
   color: #ffffff;
   font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  box-shadow: 0 0 15px rgba(64, 158, 255, 0.3);
+  transform: scale(1.05);
 }
 
 .boss-avatar {
-  background: linear-gradient(135deg, #409eff 0%, #3a8ee6 100%);
+  background: linear-gradient(135deg, #722ed1 0%, #409eff 100%);
 }
 
 .user-name {
@@ -585,16 +596,38 @@ onUnmounted(() => {
   margin: 4px 8px;
   border-radius: 8px;
   color: #606266;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-menu :deep(.el-menu-item::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background-color: #ecf5ff !important;
+  background-color: #f0f9ff !important;
   color: #409eff;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active::before) {
+  opacity: 1;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
   background-color: #f5f7fa;
+  color: #409eff;
+  transform: translateX(4px);
 }
 
 /* 侧边栏折叠按钮 */

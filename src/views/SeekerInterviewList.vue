@@ -6,7 +6,6 @@
       <!-- 面试列表 -->
       <div class="interview-list">
         <el-table :data="interviews" style="width: 100%" border>
-          <el-table-column prop="id" label="面试ID" width="80" />
           <el-table-column prop="companyName" label="公司" width="120" />
           <el-table-column prop="positionTitle" label="面试职位" width="180" />
           <el-table-column prop="interviewTime" label="面试时间" width="180">
@@ -37,28 +36,39 @@
               <span v-else>无</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="220" fixed="right">
             <template #default="scope">
               <el-button size="small" @click="handleViewInterview(scope.row.id)">
                 <el-icon><View /></el-icon>
                 查看
               </el-button>
+              <!-- AI面试且待确认状态：显示开始AI面试 -->
               <el-button 
+                v-if="scope.row.interviewType === 3 && scope.row.status === 1"
                 size="small" 
-                type="primary" 
-                @click="handleUpdateStatus(scope.row.id, 2)"
-                :disabled="scope.row.status !== 1"
+                type="success" 
+                @click="handleStartAIInterview(scope.row)"
               >
-                确认面试
+                <el-icon><VideoPlay /></el-icon>
+                开始面试
               </el-button>
-              <el-button 
-                size="small" 
-                type="danger" 
-                @click="handleUpdateStatus(scope.row.id, 3)"
-                :disabled="scope.row.status !== 1"
-              >
-                拒绝面试
-              </el-button>
+              <!-- 普通面试且待确认状态：显示接受/拒绝 -->
+              <template v-else-if="scope.row.interviewType !== 3 && scope.row.status === 1">
+                <el-button 
+                  size="small" 
+                  type="success" 
+                  @click="handleUpdateStatus(scope.row.id, 2)"
+                >
+                  接受面试
+                </el-button>
+                <el-button 
+                  size="small" 
+                  type="danger" 
+                  @click="handleUpdateStatus(scope.row.id, 3)"
+                >
+                  拒绝
+                </el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -128,9 +138,20 @@
           
           <div class="detail-section" v-if="currentInterview.status === 1">
             <h3>面试确认</h3>
-            <div class="status-buttons">
-              <el-button type="primary" @click="handleUpdateStatus(currentInterview.id, 2)">
-                确认面试
+            <!-- AI面试：显示开始面试按钮 -->
+            <div v-if="currentInterview.interviewType === 3" class="status-buttons">
+              <el-button type="success" size="large" @click="handleStartAIInterview(currentInterview)">
+                <el-icon><VideoPlay /></el-icon>
+                开始AI面试
+              </el-button>
+              <el-button type="danger" @click="handleUpdateStatus(currentInterview.id, 3)">
+                拒绝面试
+              </el-button>
+            </div>
+            <!-- 普通面试：显示接受/拒绝按钮 -->
+            <div v-else class="status-buttons">
+              <el-button type="success" @click="handleUpdateStatus(currentInterview.id, 2)">
+                接受面试
               </el-button>
               <el-button type="danger" @click="handleUpdateStatus(currentInterview.id, 3)">
                 拒绝面试
@@ -148,12 +169,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElIcon } from 'element-plus'
-import { View } from '@element-plus/icons-vue'
+import { View, VideoPlay } from '@element-plus/icons-vue'
 // 动态导入AppLayout组件
 import { defineAsyncComponent } from 'vue'
 const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'))
 import { getJobSeekerInterviews, getInterviewDetail, updateInterviewStatus } from '../utils/api'
+
+const router = useRouter()
 
 // 状态
 const interviews = ref<any[]>([])
@@ -201,7 +225,7 @@ const handleViewInterview = async (id: number) => {
 // 处理更新面试状态
 const handleUpdateStatus = async (id: number, status: number) => {
   try {
-    const message = status === 2 ? '确认面试' : '拒绝面试'
+    const message = status === 2 ? '接受面试' : '拒绝面试'
     await ElMessageBox.confirm(`确定要${message}吗？`, '确认操作', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
@@ -209,6 +233,7 @@ const handleUpdateStatus = async (id: number, status: number) => {
     })
     await updateInterviewStatus(id, status)
     ElMessage.success(`${message}成功`)
+    detailDialogVisible.value = false
     loadInterviews()
     if (currentInterview.value && currentInterview.value.id === id) {
       currentInterview.value.status = status
@@ -219,6 +244,19 @@ const handleUpdateStatus = async (id: number, status: number) => {
       ElMessage.error('更新面试状态失败')
     }
   }
+}
+
+// 处理开始AI面试
+const handleStartAIInterview = (interview: any) => {
+  // 跳转到真实面试页面，携带面试信息
+  router.push({
+    path: '/real-interview',
+    query: {
+      interviewId: interview.id.toString(),
+      positionTitle: interview.positionTitle || '',
+      companyName: interview.companyName || ''
+    }
+  })
 }
 
 // 工具函数

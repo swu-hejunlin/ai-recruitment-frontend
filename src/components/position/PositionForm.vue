@@ -199,7 +199,7 @@ import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { addPosition, updatePosition, getCompanyInfo } from '@/utils/api'
 import type { AddPositionRequest, UpdatePositionRequest, PositionInfo, CompanyInfo, EducationLevel, PositionStatus } from '@/types'
-import { CATEGORY_OPTIONS } from '@/types'
+import { CATEGORY_OPTIONS, CITY_OPTIONS } from '@/types'
 
 interface Props {
   mode?: 'add' | 'edit'
