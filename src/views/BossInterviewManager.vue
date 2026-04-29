@@ -329,7 +329,7 @@ const loadInterviews = async () => {
     const interviewList = response || []
     
     // 为每个AI面试获取评估结果
-    for (const interview of interviewList) {
+    for (const interview of interviewList as any[]) {
       if (interview.interviewType === 3) {
         try {
           const evaluation = await getInterviewEvaluation(interview.id)

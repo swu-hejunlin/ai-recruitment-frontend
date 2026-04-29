@@ -160,18 +160,6 @@
                         <el-icon><Location /></el-icon>
                         <span>{{ getCityInfo(row) }}</span>
                       </div>
-                      <div class="ai-score-badge" v-if="row.aiScore !== null && row.aiScore !== undefined">
-                        <el-rate
-                          v-model="row.aiScore"
-                          disabled
-                          allow-half
-                          :max="5"
-                          :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-                          text-color="#ff9900"
-                          size="small"
-                        />
-                        <span class="ai-score-text">{{ row.aiScore.toFixed(1) }}</span>
-                      </div>
                     </div>
                     
                     <div class="position-requirements" v-if="hasRequirementInfo(row)">
@@ -240,13 +228,6 @@
                   >
                     查看公司
                   </el-button>
-                  <el-button
-                    v-if="row.aiScore !== null && row.aiScore !== undefined"
-                    size="small"
-                    @click="showAiScoreDetail(row)"
-                  >
-                    AI评分: {{ row.aiScore.toFixed(1) }}
-                  </el-button>
                 </div>
               </template>
             </el-table-column>
@@ -274,32 +255,6 @@
         :position="selectedPosition"
       />
 
-      <!-- AI评分详情对话框 -->
-      <el-dialog
-        v-model="aiScoreDialogVisible"
-        title="AI匹配度分析"
-        width="400px"
-      >
-        <div v-if="selectedApplication" class="ai-score-detail">
-          <div class="score-display">
-            <el-rate
-              v-model="selectedApplication.aiScore"
-              disabled
-              allow-half
-              :max="5"
-              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-              text-color="#ff9900"
-            />
-            <div class="score-value">{{ selectedApplication.aiScore?.toFixed(1) || '未知' }}</div>
-          </div>
-          <div class="score-description">
-            <p>AI匹配度是基于您的简历与职位要求进行智能分析的结果，评分越高表示匹配程度越好。</p>
-            <p class="score-tip">建议分数4.0以上的职位重点关注！</p>
-          </div>
-        </div>
-      </el-dialog>
-
-      
     </div>
   </AppLayout>
 </template>
@@ -331,7 +286,6 @@ const tableData = ref<ApplicationInfo[]>([])
 
 // 对话框
 const detailDialogVisible = ref(false)
-const aiScoreDialogVisible = ref(false)
 const selectedPosition = ref<PositionInfo | null>(null)
 const loadingPosition = ref(false)
 const selectedApplicationForPosition = ref<ApplicationInfo | null>(null)
@@ -451,12 +405,6 @@ const viewJobDetailFromApp = async (applicationId: number) => {
   } finally {
     loadingPosition.value = false
   }
-}
-
-// 显示AI评分详情
-const showAiScoreDetail = (application: ApplicationInfo) => {
-  selectedApplication.value = application
-  aiScoreDialogVisible.value = true
 }
 
 // 前往发现职位页面

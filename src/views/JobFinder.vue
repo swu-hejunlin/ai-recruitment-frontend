@@ -154,7 +154,7 @@
                           :min="0"
                           :max="100"
                           :step="5"
-                          :format-tooltip="value => `${value}K`"
+                          :format-tooltip="(value: number) => `${value}K`"
                         />
                         <div class="salary-display">
                           {{ filterForm.salaryRange[0] }}K - {{ filterForm.salaryRange[1] }}K
@@ -487,8 +487,8 @@ const fetchPositions = async () => {
       title: searchKeyword.value.trim() || undefined,
       city: filterForm.value.city || undefined,
       category: filterForm.value.category || undefined,
-      workYearsMin: filterForm.value.workYearsMin || undefined,
-      educationMin: filterForm.value.educationMin || undefined,
+      workYearsMin: Number(filterForm.value.workYearsMin) || undefined,
+      educationMin: Number(filterForm.value.educationMin) || undefined,
       salaryMin: filterForm.value.salaryRange[0] || undefined,
       salaryMax: filterForm.value.salaryRange[1] || undefined,
       searchType: filterForm.value.searchType.join(',') || undefined,

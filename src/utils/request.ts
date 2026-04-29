@@ -1,24 +1,14 @@
-/**
- * Axios 封装
- * 提供统一的 HTTP 请求配置、拦截器和错误处理
- */
-
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
 import type { Result } from '@/types';
+import { getFromCache, setCache, invalidateCache, getCacheKey, invalidateAllCache } from './cache';
 
-// ==================== 基础配置 ====================
-/**
- * API 基础 URL（开发环境）
- */
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const REQUEST_TIMEOUT = 300000;
 
-/**
- * 请求超时时间（毫秒）
- */
-const REQUEST_TIMEOUT = 300000; // 5分钟，足够完成视频上传和AI分析
+const CACHE_PREFIXES = ['/api/position/latest', '/api/position/hot', '/api/statistics', '/api/job-recommend', '/api/talent-recommend']
+const INVALIDATE_PREFIXES = ['/api/position', '/api/application', '/api/notification', '/api/job-seeker', '/api/company', '/api/interview', '/api/favorite']
 
-// ==================== 创建 Axios 实例 ====================
 const request = axios.create({
   baseURL: BASE_URL,
   timeout: REQUEST_TIMEOUT,
@@ -27,7 +17,6 @@ const request = axios.create({
   }
 });
 
-// 扩展 request 方法的返回类型，使其返回拦截器处理后的类型
 interface RequestInstance extends AxiosInstance {
   post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
   get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
@@ -37,22 +26,16 @@ interface RequestInstance extends AxiosInstance {
 
 const typedRequest = request as RequestInstance;
 
-// ==================== 请求拦截器 ====================
+function shouldCache(url: string): boolean {
+  return CACHE_PREFIXES.some(p => url.includes(p))
+}
+
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // 从 localStorage 获取 token
     const token = localStorage.getItem('token');
-    
-    // 如果存在 token，添加到请求头
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // 记录请求日志（仅开发环境且简略）
-    if (import.meta.env.DEV) {
-      console.log(`[Request] ${config.method?.toUpperCase()} ${config.url}`);
-    }
-
     return config;
   },
   (error) => {
@@ -60,28 +43,45 @@ request.interceptors.request.use(
   }
 );
 
-// ==================== 响应拦截器 ====================
 request.interceptors.response.use(
   (response: AxiosResponse<Result>) => {
+    const config = response.config
+    const method = (config.method || 'get').toLowerCase()
+    const url = config.url || ''
     const { code, message, data } = response.data;
 
-    // 业务状态码 200 表示成功
+    if (method === 'get' && code === 200 && shouldCache(url)) {
+      const cacheKey = getCacheKey(url, config.params)
+      const cached = getFromCache(cacheKey)
+      if (cached !== null) {
+        return cached
+      }
+      setCache(cacheKey, data)
+    }
+
+    if (method !== 'get') {
+      for (const prefix of INVALIDATE_PREFIXES) {
+        if (url.includes(prefix)) {
+          invalidateCache(prefix)
+        }
+      }
+    }
+
     if (code === 200) {
       return data;
     }
 
-    // 处理认证失效情况
     if (code === 401) {
       clearLocalAuth();
       ElMessage.error(message || '登录已过期，请重新登录');
       return Promise.reject(new Error(message || 'Unauthorized'));
     }
 
-    // 处理其他业务错误
     ElMessage.error(message || '请求失败');
     return Promise.reject(new Error(message || 'Business Error'));
   },
   (error) => {
+    invalidateAllCache()
     if (error.response) {
       const { status, data } = error.response;
       let errorMessage = data?.message || '请求失败';
@@ -101,35 +101,28 @@ request.interceptors.response.use(
           errorMessage = '服务器内部错误';
           break;
       }
-      
+
       ElMessage.error(errorMessage);
     } else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请检查网络');
     } else {
       ElMessage.error('网络错误，请稍后重试');
     }
-    
+
     return Promise.reject(error);
   }
 );
 
-/**
- * 清除本地认证信息
- */
 function clearLocalAuth() {
   localStorage.removeItem('token');
   localStorage.removeItem('userInfo');
-  // 如果在组件外使用，可以通过 import 动态获取 store
+  invalidateAllCache()
   import('@/stores/userStore').then(({ useUserStore }) => {
     const userStore = useUserStore();
     userStore.logout();
   });
 }
 
-// ==================== 导出 ====================
 export default typedRequest;
 
-/**
- * 导出 Axios 原始类型，用于泛型约束
- */
 export type { AxiosRequestConfig, AxiosResponse, AxiosInstance, InternalAxiosRequestConfig };

@@ -870,10 +870,14 @@ export interface QueryPositionRequest {
   category?: string;
   /** 最低学历要求 */
   educationMin?: EducationLevel;
+  /** 工作年限要求 */
+  workYearsMin?: number;
   /** 薪资范围最小值 */
   salaryMin?: number;
   /** 薪资范围最大值 */
   salaryMax?: number;
+  /** 搜索范围 */
+  searchType?: string;
   /** 页码 */
   pageNum?: number;
   /** 每页数量 */
@@ -1061,8 +1065,8 @@ export type NotificationType = 1 | 2 | 3;
 export interface NotificationInfo {
   /** 通知ID */
   id: number;
-  /** 用户ID */
-  userId: number;
+  /** 接收者用户ID */
+  receiverId: number;
   /** 通知类型 */
   type: NotificationType;
   /** 通知标题 */
@@ -1189,4 +1193,155 @@ declare global {
     /** 是否正在进行角色切换 */
     isSwitchingRole?: boolean;
   }
+}
+
+// ==================== 画像相关类型 ====================
+export interface JobProfileResponse {
+  id: number;
+  positionId: number;
+  skills: string;
+  educationRequire: string;
+  experienceRequire: string;
+  salaryMin: number;
+  salaryMax: number;
+  jobTags: string;
+  descriptionSummary: string;
+  responsibilitiesSummary: string;
+  requirementsSummary: string;
+  companyBenefits: string;
+  matchKeywords: string;
+  embeddingVector: string;
+}
+
+export interface TalentProfileResponse {
+  id: number;
+  userId: number;
+  skills: string;
+  education: string;
+  workYears: number;
+  salaryExpectation: number;
+  currentSalary: number;
+  talentTags: string;
+  descriptionSummary: string;
+  strengthsSummary: string;
+  careerGoals: string;
+  matchKeywords: string;
+  aiEvaluation: string;
+  embeddingVector: string;
+}
+
+// ==================== 推荐相关类型 ====================
+export interface JobRecommendResponse {
+  id: number;
+  positionId: number;
+  matchScore: number;
+  skillMatchRate: number;
+  experienceMatchRate: number;
+  educationMatchRate: number;
+  salaryMatchRate: number;
+  matchDetails: string;
+  position: PositionInfo;
+}
+
+export interface TalentRecommendResponse {
+  id: number;
+  userId: number;
+  positionId: number;
+  matchScore: number;
+  skillMatchRate: number;
+  experienceMatchRate: number;
+  educationMatchRate: number;
+  salaryMatchRate: number;
+  matchDetails: string;
+  jobSeeker: JobSeekerInfo;
+}
+
+// ==================== 面试相关类型 ====================
+export interface InterviewInfo {
+  id: number;
+  applicationId: number;
+  jobSeekerId: number;
+  positionId: number;
+  companyId: number;
+  interviewTime: string;
+  interviewType: number;
+  interviewAddress: string;
+  interviewLink: string;
+  status: number;
+  remark: string;
+  aiScore: number;
+  aiEvaluation: string;
+  createTime: string;
+  updateTime: string;
+}
+
+export interface InterviewDetail extends InterviewInfo {
+  positionTitle: string;
+  companyName: string;
+  jobSeekerName: string;
+}
+
+export interface MockInterviewResponse {
+  interviewId: number;
+  sessionKey: string;
+  questions: string[];
+}
+
+export interface SmartFillResponse {
+  success: boolean;
+  errorMessage?: string;
+  name?: string;
+  gender?: number;
+  age?: number;
+  phone?: string;
+  email?: string;
+  city?: string;
+  address?: string;
+  workYears?: number;
+  currentSalary?: number;
+  expectedSalary?: number;
+  currentStatus?: number;
+  introduction?: string;
+  skills?: string[];
+  unfilledFields?: string[];
+}
+
+export interface InterviewEvaluationData {
+  score: number;
+  languageScore: number;
+  logicScore: number;
+  professionalScore: number;
+  evaluationText: string;
+  suggestions: string[];
+  dimensions: { name: string; score: number; comment: string }[];
+  summary: string;
+}
+
+// ==================== 统计相关类型 ====================
+export interface SeekerStatistics {
+  totalPositions: number;
+  todayNewPositions: number;
+  myApplications: number;
+  myInterviews: number;
+  hotCities: { city: string; count: number; percentage: number }[];
+  hotCategories: { category: string; count: number; percentage: number }[];
+  competitionIndex: number;
+  highSalaryPercentage: number;
+}
+
+export interface BossStatistics {
+  myPositions: number;
+  myApplications: number;
+  pendingApplications: number;
+  interviewingCount: number;
+  hiredCount: number;
+  rejectedCount: number;
+  conversionRate: number;
+  positionStats: { positionTitle: string; applicationCount: number; conversionRate: number }[];
+}
+
+export interface WordCloudData {
+  skills: { name: string; value: number }[];
+  positions: { name: string; value: number }[];
+  requirements: { name: string; value: number }[];
 }

@@ -27,7 +27,7 @@
         style="width: 100%"
         :border="true"
       >
-        <el-table-column prop="title" label="职位名称" min-width="200">
+        <el-table-column prop="title" label="职位名称" min-width="180">
           <template #default="{ row }">
             <div class="position-title">
               <span class="title-text">{{ row.title }}</span>
@@ -38,13 +38,6 @@
         </el-table-column>
         <el-table-column prop="category" label="职位类别" width="120" />
         <el-table-column prop="city" label="工作城市" width="100" />
-        <el-table-column label="公司名称" width="180">
-          <template #default="{ row }">
-            <div class="company-info">
-              <span>{{ row.companyName || `公司-${row.companyId}` }}</span>
-            </div>
-          </template>
-        </el-table-column>
         <el-table-column label="薪资范围" width="150">
           <template #default="{ row }">
             <span class="salary-text">{{ formatSalary(row.salaryMin, row.salaryMax) }}</span>
@@ -68,11 +61,14 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
             <el-button-group>
               <el-button type="primary" size="small" @click="handleEdit(row)">
                 编辑
+              </el-button>
+              <el-button type="warning" size="small" :loading="row.profileLoading" @click="handleGenerateProfile(row)">
+                {{ row.hasProfile ? '更新画像' : '生成画像' }}
               </el-button>
               <el-button type="danger" size="small" @click="handleDelete(row)">
                 删除
@@ -145,12 +141,14 @@ import { Plus } from '@element-plus/icons-vue'
 import { defineAsyncComponent } from 'vue'
 const PositionForm = defineAsyncComponent(() => import('./PositionForm.vue'))
 const PositionDetailView = defineAsyncComponent(() => import('./PositionDetailView.vue'))
-import { getBossPositionList, deletePosition, closePosition, openPosition } from '../../utils/api'
+import { getBossPositionList, deletePosition, closePosition, openPosition, generateJobProfile, getJobProfile } from '../../utils/api'
 import type { PositionInfo } from '../../types'
 
 // 表格数据
 interface TableRow extends PositionInfo {
   switchLoading?: boolean
+  profileLoading?: boolean
+  hasProfile?: boolean
 }
 
 const tableData = ref<TableRow[]>([])
@@ -245,6 +243,22 @@ const handleView = (row: PositionInfo) => {
   detailDrawerVisible.value = true
 }
 
+// 处理生成/更新岗位画像
+const handleGenerateProfile = async (row: TableRow) => {
+  const isUpdate = row.hasProfile
+  try {
+    row.profileLoading = true
+    await generateJobProfile(row.id)
+    row.hasProfile = true
+    ElMessage.success(isUpdate ? '岗位画像已更新' : '岗位画像已生成')
+  } catch (error) {
+    console.error('生成岗位画像失败:', error)
+    ElMessage.error('生成岗位画像失败，请重试')
+  } finally {
+    row.profileLoading = false
+  }
+}
+
 // 处理发布新职位
 const handleAddPosition = () => {
   formMode.value = 'add'
@@ -297,9 +311,13 @@ const fetchPositionList = async () => {
     })))
     tableData.value = response.records.map(item => ({
       ...item,
-      switchLoading: false
+      switchLoading: false,
+      profileLoading: false,
+      hasProfile: false
     }))
     pagination.total = response.total
+    // 并行检查每个职位的画像状态
+    checkProfilesStatus()
   } catch (error) {
     console.error('获取职位列表失败:', error)
     ElMessage.error('获取职位列表失败')
@@ -307,6 +325,18 @@ const fetchPositionList = async () => {
   } finally {
     loading.value = false
     tableLoading.value = false
+  }
+}
+
+// 检查所有职位的画像状态
+const checkProfilesStatus = async () => {
+  for (const row of tableData.value) {
+    try {
+      await getJobProfile(row.id)
+      row.hasProfile = true
+    } catch {
+      row.hasProfile = false
+    }
   }
 }
 

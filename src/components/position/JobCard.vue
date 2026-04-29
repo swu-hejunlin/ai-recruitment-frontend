@@ -88,7 +88,7 @@ import type { PositionInfo, EducationLevel } from '../../types'
 import { addFavorite, removeFavorite, checkFavorite } from '../../utils/api'
 
 interface Props {
-  position: PositionInfo
+  position: PositionInfo & Record<string, any>
 }
 
 const props = defineProps<Props>()
@@ -213,16 +213,16 @@ const handleViewDetail = (e: Event) => {
 
 <style scoped lang="scss">
 .job-card {
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  background: var(--ai-bg-primary);
+  border-radius: var(--ai-radius-lg);
+  border: 1px solid var(--ai-border-light);
   padding: 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all var(--ai-animation-normal);
   display: flex;
   flex-direction: column;
   height: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--ai-shadow-sm);
 
   &:hover {
     transform: translateY(-4px);
@@ -255,7 +255,7 @@ const handleViewDetail = (e: Event) => {
           margin: 0 0 8px 0;
           font-size: 18px;
           font-weight: 600;
-          color: #222;
+          color: var(--ai-text-primary);
           line-height: 1.4;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -270,8 +270,8 @@ const handleViewDetail = (e: Event) => {
         }
 
         .company-name {
-          font-size: 14px;
-          color: #666;
+          font-size: var(--ai-font-sm);
+          color: var(--ai-text-secondary);
           font-weight: 500;
         }
       }
@@ -284,7 +284,7 @@ const handleViewDetail = (e: Event) => {
   .salary-text {
     font-size: 24px;
     font-weight: 600;
-    color: #ff4d4f;
+    color: var(--ai-danger);
     line-height: 1.2;
   }
 }
@@ -305,13 +305,13 @@ const handleViewDetail = (e: Event) => {
     gap: 8px;
 
     .el-icon {
-      color: #999;
+      color: var(--ai-text-tertiary);
       flex-shrink: 0;
     }
 
     .meta-text {
-      font-size: 14px;
-      color: #666;
+      font-size: var(--ai-font-sm);
+      color: var(--ai-text-secondary);
       line-height: 1.4;
     }
   }
@@ -326,15 +326,15 @@ const handleViewDetail = (e: Event) => {
 
   .benefit-tag {
     margin: 0;
-    font-size: 12px;
-    border-radius: 4px;
+    font-size: var(--ai-font-xs);
+    border-radius: var(--ai-radius-sm);
     padding: 0 8px;
     height: 24px;
   }
 
   .more-tags {
-    font-size: 12px;
-    color: #999;
+    font-size: var(--ai-font-xs);
+    color: var(--ai-text-tertiary);
     line-height: 24px;
     margin-left: 4px;
   }

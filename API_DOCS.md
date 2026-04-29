@@ -100,16 +100,16 @@
 | **智能简历分析** | `POST /api/resume/upload-and-analyze` | 上传并分析简历 |
 | | `POST /api/resume/analyze` | 分析已有简历 |
 | **智能填充** | `POST /api/resume/smart-fill` | 智能填充简历信息 |
-| **岗位画像** | `POST /api/job-profile/generate/{jobId}` | 生成岗位画像 |
-| | `GET /api/job-profile/{jobId}` | 获取岗位画像 |
-| | `PUT /api/job-profile/update/{jobId}` | 更新岗位画像 |
-| | `DELETE /api/job-profile/{jobId}` | 删除岗位画像 |
+| **岗位画像** | `POST /api/job-profile/generate/{positionId}` | 生成岗位画像 |
+| | `GET /api/job-profile/{positionId}` | 获取岗位画像 |
+| | `PUT /api/job-profile/update/{positionId}` | 更新岗位画像 |
+| | `DELETE /api/job-profile/{positionId}` | 删除岗位画像 |
 | **人才画像** | `POST /api/talent-profile/generate` | 生成人才画像 |
 | | `GET /api/talent-profile` | 获取人才画像 |
 | | `PUT /api/talent-profile/update` | 更新人才画像 |
 | | `DELETE /api/talent-profile` | 删除人才画像 |
 | **岗位推荐** | `GET /api/job-recommend` | 获取岗位推荐列表 |
-| | `GET /api/job-recommend/match/{jobId}` | 获取匹配度详情 |
+| | `GET /api/job-recommend/match/{positionId}` | 获取匹配度详情 |
 | | `POST /api/job-recommend/batch-generate` | 批量生成匹配记录 |
 | | `PUT /api/job-recommend/viewed/{recordId}` | 标记为已查看 |
 

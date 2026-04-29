@@ -1,21 +1,14 @@
-/**
- * 应用布局组件
- * 提供顶部导航栏 + 侧边栏的通用布局
- */
-
 <template>
   <div class="app-layout">
-    <!-- 顶部导航栏 -->
     <header class="app-header">
       <div class="header-left">
         <div class="logo" @click="goHome">
-          <el-icon :size="28"><DataBoard /></el-icon>
+          <img src="/images/logo.png" alt="智能招聘平台" class="logo-image" />
           <span class="logo-text">智能招聘平台</span>
         </div>
       </div>
 
       <div class="header-right">
-        <!-- 通知中心 -->
         <el-dropdown trigger="click" class="notification-dropdown">
           <div class="notification-icon-wrapper">
             <el-icon :size="20" class="notification-icon">
@@ -38,12 +31,11 @@
           </template>
         </el-dropdown>
 
-        <!-- 用户信息下拉菜单 -->
         <el-dropdown trigger="click" @command="handleCommand">
           <div class="user-info">
             <el-avatar
               v-if="userStore.userInfo?.role === 1"
-              :src="jobSeekerInfo?.avatar"
+              :src="jobSeekerInfo?.jobSeeker?.avatar"
               :size="32"
               class="user-avatar"
             >
@@ -53,7 +45,7 @@
               v-else-if="userStore.userInfo?.role === 2"
               :src="companyInfo?.logo"
               :size="32"
-              class="user-avatar boss-avatar"
+              class="user-avatar"
             >
               {{ userName.charAt(0) }}
             </el-avatar>
@@ -81,20 +73,17 @@
     </header>
 
     <div class="app-body">
-      <!-- 侧边栏 -->
-      <aside class="app-sidebar">
+      <aside class="app-sidebar" :class="{ 'is-collapse': isSidebarCollapse }">
         <el-menu
           :default-active="activeMenu"
           :router="true"
           :collapse="isSidebarCollapse"
           class="sidebar-menu"
         >
-          <!-- 加载状态 -->
           <div v-if="!userRole" class="loading-menu">
             <el-skeleton :rows="2" animated />
           </div>
-          
-          <!-- 求职者菜单 -->
+
           <template v-else-if="userRole === 1">
             <el-menu-item index="/">
               <el-icon><House /></el-icon>
@@ -109,19 +98,17 @@
               <template #title>
                 <span class="menu-item-with-badge">
                   我的投递
-                  <!-- 求职者：显示投递总数 -->
                   <el-badge
                     v-if="userStore.applicationCount > 0"
                     :value="userStore.applicationCount"
                     :max="99"
-                    class="notification-badge"
+                    class="menu-badge"
                     type="primary"
                   />
-                  <!-- 如果有未读通知（如面试通知），也可以在这里显示 -->
                   <el-badge
                     v-if="userStore.unreadNotificationCount > 0"
                     is-dot
-                    class="notification-dot"
+                    class="menu-dot"
                     type="danger"
                   />
                 </span>
@@ -153,7 +140,6 @@
             </el-menu-item>
           </template>
 
-          <!-- 企业HR菜单 -->
           <template v-else-if="userRole === 2">
             <el-menu-item index="/">
               <el-icon><House /></el-icon>
@@ -176,7 +162,7 @@
                     v-if="userStore.unreadNotificationCount > 0"
                     :value="userStore.unreadNotificationCount"
                     :max="99"
-                    class="notification-badge"
+                    class="menu-badge"
                     type="danger"
                   />
                 </span>
@@ -185,6 +171,10 @@
             <el-menu-item index="/boss/interviews">
               <el-icon><Message /></el-icon>
               <template #title>面试管理</template>
+            </el-menu-item>
+            <el-menu-item index="/boss/talent-discovery">
+              <el-icon><UserFilled /></el-icon>
+              <template #title>牛人发现</template>
             </el-menu-item>
             <el-menu-item index="/favorites">
               <el-icon><Star /></el-icon>
@@ -195,8 +185,7 @@
               <template #title>数据统计</template>
             </el-menu-item>
           </template>
-          
-          <!-- 角色未识别或无权限 -->
+
           <template v-else>
             <div class="no-permission-menu">
               <el-empty description="暂无权限或角色信息错误" />
@@ -204,7 +193,6 @@
           </template>
         </el-menu>
 
-        <!-- 侧边栏折叠按钮 -->
         <div class="sidebar-collapse" @click="toggleSidebar">
           <el-icon>
             <DArrowLeft v-if="!isSidebarCollapse" />
@@ -213,7 +201,6 @@
         </div>
       </aside>
 
-      <!-- 主内容区 -->
       <main class="app-main">
         <slot />
       </main>
@@ -224,64 +211,38 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage, ElMessageBox, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
-  DataBoard,
-  User,
-  ArrowDown,
-  UserFilled,
-  SwitchButton,
-  House,
-  OfficeBuilding,
-  DArrowLeft,
-  DArrowRight,
-  Position,
-  Document,
-  BellFilled,
-  Message,
-  Star,
-  DataAnalysis,
-  MagicStick,
-  PieChart,
-  VideoCamera
+  User, ArrowDown, UserFilled, SwitchButton,
+  House, OfficeBuilding, DArrowLeft, DArrowRight,
+  Position, Document, BellFilled, Message,
+  Star, DataAnalysis, MagicStick, PieChart, VideoCamera
 } from '@element-plus/icons-vue';
-// 动态导入NotificationCenter组件
+
 const NotificationCenter = defineAsyncComponent(() => import('./NotificationCenter.vue'));
 import { useUserStore } from '../stores/userStore';
-import { getJobSeekerInfo, getCompanyInfo, getUnreadNotificationCount } from '../utils/api';
-import type { JobSeekerInfo, CompanyInfo } from '../types';
+import { getJobSeekerInfo, getCompanyInfo } from '../utils/api';
+import type { JobSeekerFullInfo, CompanyInfo } from '../types';
 import { ROLE_MAP } from '../types';
-// cSpell:ignore pinia
 import { storeToRefs } from 'pinia';
+import { useWebSocket } from '../utils/useWebSocket';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const { isLogin } = storeToRefs(userStore);
+const ws = useWebSocket();
 
-// ==================== 状态 ====================
 const isSidebarCollapse = ref(false);
-const jobSeekerInfo = ref<JobSeekerInfo | null>(null);
+const jobSeekerInfo = ref<JobSeekerFullInfo | null>(null);
 const companyInfo = ref<CompanyInfo | null>(null);
-let notificationTimer: number | null = null;
 
-// ==================== 计算属性 ====================
-/**
- * 当前激活的菜单
- */
 const activeMenu = computed(() => route.path);
-
-/**
- * 用户角色
- */
 const userRole = computed(() => userStore.userInfo?.role);
 
-/**
- * 用户名称
- */
 const userName = computed(() => {
-  if (userRole.value === 1 && jobSeekerInfo.value?.name) {
-    return jobSeekerInfo.value.name;
+  if (userRole.value === 1 && jobSeekerInfo.value?.jobSeeker?.name) {
+    return jobSeekerInfo.value.jobSeeker.name;
   }
   if (userRole.value === 2 && companyInfo.value?.companyName) {
     return companyInfo.value.companyName;
@@ -289,134 +250,73 @@ const userName = computed(() => {
   return ROLE_MAP[userRole.value as 1 | 2] || '用户';
 });
 
-// ==================== 方法 ====================
-/**
- * 切换侧边栏折叠状态
- */
 const toggleSidebar = () => {
   isSidebarCollapse.value = !isSidebarCollapse.value;
 };
 
-/**
- * 跳转到首页
- */
 const goHome = () => {
   router.push('/');
 };
 
-/**
- * 处理下拉菜单命令
- */
 const handleCommand = async (command: string) => {
   if (command === 'profile') {
-    // 跳转到个人中心
     if (userRole.value === 1) {
       router.push('/profile');
     } else {
       router.push('/company');
     }
   } else if (command === 'logout') {
-    // 退出登录
     try {
       await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       });
-
       userStore.logout();
       ElMessage.success('已退出登录');
       router.push('/login');
     } catch {
-      // 用户取消
+      // 用户取消操作
     }
   }
 };
 
-/**
- * 刷新计数
- */
 const refreshCounts = async () => {
   if (!userStore.isLogin) return;
   await userStore.refreshCounts();
 };
 
-/**
- * 开始轮询角标计数
- */
-const startCountPolling = () => {
-  if (notificationTimer) clearInterval(notificationTimer);
-  
-  // 首次立即刷新
-  refreshCounts();
-  
-  // 每30秒轮询一次
-  notificationTimer = setInterval(() => {
-    if (userStore.isLogin) {
-      refreshCounts();
-    }
-  }, 30000);
-};
-
-/**
- * 停止轮询角标计数
- */
-const stopCountPolling = () => {
-  if (notificationTimer) {
-    clearInterval(notificationTimer);
-    notificationTimer = null;
-  }
-};
-
-/**
- * 获取用户信息
- */
 const fetchUserInfo = async () => {
   try {
-    console.log('[AppLayout调试] 尝试获取用户信息，用户角色:', userRole.value);
-    console.log('[AppLayout调试] 当前store状态:', {
-      isLogin: userStore.isLogin,
-      token: userStore.token ? `${userStore.token.substring(0, 20)}...` : null,
-      userInfo: userStore.userInfo
-    });
-    
     if (userRole.value === 1) {
-      console.log('[AppLayout调试] 开始获取求职者信息...');
       const res = await getJobSeekerInfo();
       jobSeekerInfo.value = res;
-      console.log('[AppLayout调试] 求职者信息获取成功:', res);
     } else if (userRole.value === 2) {
-      console.log('[AppLayout调试] 开始获取企业信息...');
       const res = await getCompanyInfo();
       companyInfo.value = res;
-      console.log('[AppLayout调试] 企业信息获取成功:', res);
     }
   } catch (error) {
-    console.error('[AppLayout调试] 获取用户信息失败:', error);
+    console.error('获取用户信息失败:', error);
   }
 };
 
-// ==================== 生命周期 ====================
 onMounted(() => {
-  console.log('[AppLayout调试] 组件挂载，开始初始化');
-  
   fetchUserInfo();
-  startCountPolling();
+  refreshCounts();
+  ws.connect();
 });
 
-// 监听登录状态变化
 watch(
   () => userStore.isLogin,
   (isLoggedIn) => {
     if (isLoggedIn) {
-      startCountPolling();
+      ws.connect();
     } else {
-      stopCountPolling();
+      ws.disconnect();
     }
   }
 );
 
-// 监听路由变化，重新获取用户信息
 watch(
   () => route.path,
   () => {
@@ -426,31 +326,30 @@ watch(
   }
 );
 
-// 组件卸载时清理定时器
 onUnmounted(() => {
-  stopCountPolling();
+  ws.disconnect();
 });
 </script>
 
 <style scoped>
 .app-layout {
   height: 100vh;
-  display: flex; 
+  display: flex;
   flex-direction: column;
-  background-color: #f5f7fa;
+  background-color: var(--ai-bg-page);
   overflow: hidden;
 }
 
-/* ==================== 顶部导航栏 ==================== */
 .app-header {
   height: 60px;
-  background-color: #ffffff;
+  background-color: var(--ai-bg-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 var(--ai-spacing-lg);
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
   z-index: 1000;
+  flex-shrink: 0;
 }
 
 .header-left {
@@ -462,18 +361,24 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: opacity var(--ai-animation-fast);
 }
 
 .logo:hover {
   opacity: 0.8;
 }
 
+.logo-image {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
 .logo-text {
-  font-size: 20px;
+  font-size: var(--ai-font-xl);
   font-weight: 700;
   margin-left: 10px;
-  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  background: var(--ai-gradient-text);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -483,34 +388,30 @@ onUnmounted(() => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.notification-dropdown {
-  position: relative;
+  gap: var(--ai-spacing-md);
 }
 
 .notification-icon-wrapper {
   position: relative;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  border-radius: var(--ai-radius-sm);
+  transition: all var(--ai-animation-fast);
   display: flex;
   align-items: center;
 }
 
 .notification-icon-wrapper:hover {
-  background-color: #f0f2f5;
+  background-color: var(--ai-bg-secondary);
 }
 
 .notification-icon {
-  color: #606266;
-  transition: color 0.3s;
+  color: var(--ai-text-secondary);
+  transition: color var(--ai-animation-fast);
 }
 
 .notification-icon-wrapper:hover .notification-icon {
-  color: #409eff;
+  color: var(--ai-primary);
 }
 
 .notification-badge {
@@ -531,19 +432,19 @@ onUnmounted(() => {
   align-items: center;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  border-radius: var(--ai-radius-sm);
+  transition: all var(--ai-animation-fast);
 }
 
 .user-info:hover {
-  background-color: #f0f2f5;
+  background-color: var(--ai-bg-secondary);
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
-  color: #ffffff;
+  background: var(--ai-gradient-primary);
+  color: var(--ai-text-white);
   font-weight: 700;
-  transition: all 0.3s ease;
+  transition: all var(--ai-animation-fast);
 }
 
 .user-avatar:hover {
@@ -551,52 +452,51 @@ onUnmounted(() => {
   transform: scale(1.05);
 }
 
-.boss-avatar {
-  background: linear-gradient(135deg, #722ed1 0%, #409eff 100%);
-}
-
 .user-name {
-  margin: 0 8px;
-  font-size: 14px;
-  color: #303133;
+  margin: 0 var(--ai-spacing-sm);
+  font-size: var(--ai-font-sm);
+  color: var(--ai-text-primary);
   font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ==================== 应用主体 ==================== */
 .app-body {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* ==================== 侧边栏 ==================== */
 .app-sidebar {
-  background-color: #ffffff;
+  background-color: var(--ai-bg-primary);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e6e6e6;
-  transition: width 0.3s;
+  border-right: 1px solid var(--ai-border);
+  transition: width var(--ai-animation-normal);
   width: 220px;
   position: relative;
+  flex-shrink: 0;
 }
 
-.app-sidebar:not(.is-collapse) {
-  width: 220px;
+.app-sidebar.is-collapse {
+  width: 64px;
 }
 
 .sidebar-menu {
   border-right: none;
   flex: 1;
+  overflow-y: auto;
 }
 
-/* 菜单项样式优化 */
 .sidebar-menu :deep(.el-menu-item) {
-  height: 50px;
-  line-height: 50px;
-  margin: 4px 8px;
-  border-radius: 8px;
-  color: #606266;
-  transition: all 0.3s ease;
+  height: 46px;
+  line-height: 46px;
+  margin: 2px 8px;
+  border-radius: var(--ai-radius-md);
+  color: var(--ai-text-secondary);
+  transition: all var(--ai-animation-fast);
   position: relative;
   overflow: hidden;
 }
@@ -605,19 +505,20 @@ onUnmounted(() => {
   content: '';
   position: absolute;
   left: 0;
-  top: 0;
-  height: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
   width: 3px;
-  background: linear-gradient(135deg, #409eff 0%, #00beaa 100%);
+  background: var(--ai-gradient-primary);
+  border-radius: 0 2px 2px 0;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--ai-animation-fast);
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background-color: #f0f9ff !important;
-  color: #409eff;
+  background-color: var(--ai-primary-light);
+  color: var(--ai-primary);
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active::before) {
@@ -625,37 +526,32 @@ onUnmounted(() => {
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
-  background-color: #f5f7fa;
-  color: #409eff;
-  transform: translateX(4px);
+  background-color: var(--ai-bg-secondary);
+  color: var(--ai-primary);
 }
 
-/* 侧边栏折叠按钮 */
 .sidebar-collapse {
   height: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  border-top: 1px solid #f0f2f5;
-  color: #909399;
-  transition: all 0.3s;
+  border-top: 1px solid var(--ai-border-lighter);
+  color: var(--ai-text-tertiary);
+  transition: all var(--ai-animation-fast);
 }
 
 .sidebar-collapse:hover {
-  background-color: #f5f7fa;
-  color: #409eff;
+  background-color: var(--ai-bg-secondary);
+  color: var(--ai-primary);
 }
 
-/* ==================== 主内容区 ==================== */
 .app-main {
   flex: 1;
-  padding: 20px;
+  padding: var(--ai-spacing-lg);
   overflow-y: auto;
-  position: relative;
 }
 
-/* ==================== 徽标相关 ==================== */
 .menu-item-with-badge {
   display: flex;
   align-items: center;
@@ -663,11 +559,19 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.notification-badge {
-  margin-left: 8px;
+.menu-badge {
+  margin-left: var(--ai-spacing-sm);
 }
 
-.loading-menu, .no-permission-menu {
-  padding: 20px;
+.menu-dot {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.loading-menu,
+.no-permission-menu {
+  padding: var(--ai-spacing-lg);
 }
 </style>

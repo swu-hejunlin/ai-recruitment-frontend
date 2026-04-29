@@ -171,11 +171,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineAsyncComponent } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { getJobRecommendations, getPositionDetail, applyPosition } from '@/utils/api';
-import AppLayout from '@/components/AppLayout.vue';
-import { defineAsyncComponent } from 'vue';
+const AppLayout = defineAsyncComponent(() => import('@/components/AppLayout.vue'));
 const JobCard = defineAsyncComponent(() => import('../components/position/JobCard.vue'));
 import { useUserStore } from '../stores/userStore';
 import type { PositionInfo, PositionDetail } from '@/types';
@@ -185,7 +184,7 @@ const recommendations = ref<any[]>([]);
 
 // 职位详情相关
 const detailDialogVisible = ref(false);
-const selectedPosition = ref<PositionDetail | null>(null);
+const selectedPosition = ref<any>(null);
 const loadingDetail = ref(false);
 
 const fetchRecommendations = async () => {
@@ -232,7 +231,7 @@ const handleViewDetails = async (item: any) => {
   }
 };
 
-const handleApply = async (position: PositionInfo) => {
+const handleApply = async (position: any) => {
   if (!position) return;
   
   if (position.status !== 1) {
@@ -275,13 +274,7 @@ const handleApply = async (position: PositionInfo) => {
   }
 };
 
-// 学历映射
-const EDUCATION_MAP: Record<number | string, string> = {
-  1: '高中及以下',
-  2: '大专',
-  3: '本科',
-  4: '硕士',
-  5: '博士',
+const EDUCATION_MAP: Record<string, string> = {
   '1': '高中及以下',
   '2': '大专',
   '3': '本科',

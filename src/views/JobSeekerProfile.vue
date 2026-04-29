@@ -442,12 +442,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick, defineAsyncComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElImageViewer, ElDialog, type FormInstance, type FormRules } from 'element-plus';
 import { User, Upload, Document, Plus, RefreshRight, Select, Edit, Close, Warning, Loading, UserFilled, CircleCheckFilled, WarningFilled, DataAnalysis, MagicStick } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/userStore';
-import AppLayout from '@/components/AppLayout.vue';
+const AppLayout = defineAsyncComponent(() => import('@/components/AppLayout.vue'));
 import WorkExperienceManager from '@/components/work-experience/WorkExperienceManager.vue';
 import ProjectExperienceManager from '@/components/project-experience/ProjectExperienceManager.vue';
 import EducationManager from '@/components/education-experience/EducationManager.vue';

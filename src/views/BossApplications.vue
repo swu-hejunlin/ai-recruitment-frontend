@@ -507,11 +507,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElIcon } from 'element-plus'
 import { Refresh, Search, Loading, Location, ArrowDown, Document, Star } from '@element-plus/icons-vue'
-import AppLayout from '../components/AppLayout.vue'
+const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'));
 import ApplicationDetailDialog from '../components/application/ApplicationDetailDialog.vue'
 import JobSeekerOnlineResumeDialog from '../components/application/JobSeekerOnlineResumeDialog.vue'
 import { useUserStore } from '../stores/userStore'
@@ -866,15 +866,13 @@ const handleAvatarError = (event: Event, row: ApplicationInfo) => {
 }
 
 // 处理收藏操作
-const handleFavorite = async (row: ApplicationInfo) => {
+const handleFavorite = async (row: ApplicationInfo & { isFavorite?: boolean }) => {
   try {
     if (row.isFavorite) {
-      // 取消收藏
       await removeFavorite(3, row.jobSeekerId)
       row.isFavorite = false
       ElMessage.success('已取消收藏该求职者')
     } else {
-      // 添加收藏
       await addFavorite(3, row.jobSeekerId)
       row.isFavorite = true
       ElMessage.success('收藏成功')

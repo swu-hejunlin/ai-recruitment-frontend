@@ -265,7 +265,7 @@
                   <el-table-column prop="applicationCount" label="投递数" width="100" align="center" />
                   <el-table-column label="转化率" width="150" align="center">
                     <template #default="{ row }">
-                      <el-progress :percentage="row.conversionRate || 0" :stroke-width="6" :show-text="true" :format="format => `${format}%`" />
+                      <el-progress :percentage="row.conversionRate || 0" :stroke-width="6" :show-text="true" :format="(pct: number) => `${pct}%`" />
                     </template>
                   </el-table-column>
                 </el-table>
@@ -321,6 +321,7 @@ import * as echarts from 'echarts'
 import 'echarts-wordcloud'
 import { getSeekerStatistics, getBossStatistics, getWordCloudData } from '@/utils/api'
 import { useUserStore } from '@/stores/userStore'
+import type { WordCloudData } from '@/types'
 
 const AppLayout = defineAsyncComponent(() => import('../components/AppLayout.vue'))
 const router = useRouter()
@@ -330,40 +331,44 @@ const loading = ref(false)
 const wordcloudRef = ref<HTMLElement>()
 let wordcloudChart: echarts.ECharts | null = null
 
-const seekerStats = ref({
-  totalPositions: 0,
-  todayNewPositions: 0,
-  myApplications: 0,
-  myInterviews: 0,
-  hotCities: [],
-  hotCategories: [],
-  competitionIndex: 0,
-  highSalaryPercentage: 0
+interface HotCityItem {
+  city: string; count: number; percentage: number
+}
+interface HotCategoryItem {
+  category: string; count: number; percentage: number
+}
+interface PositionStatItem {
+  positionTitle: string; applicationCount: number; conversionRate: number
+}
+
+const seekerStats = ref<{
+  totalPositions: number; todayNewPositions: number; myApplications: number; myInterviews: number;
+  hotCities: HotCityItem[]; hotCategories: HotCategoryItem[]; competitionIndex: number; highSalaryPercentage: number
+}>({
+  totalPositions: 0, todayNewPositions: 0, myApplications: 0, myInterviews: 0,
+  hotCities: [], hotCategories: [], competitionIndex: 0, highSalaryPercentage: 0
 })
 
-const bossStats = ref({
-  myPositions: 0,
-  myApplications: 0,
-  pendingApplications: 0,
-  interviewingCount: 0,
-  hiredCount: 0,
-  rejectedCount: 0,
-  conversionRate: 0,
-  positionStats: []
+const bossStats = ref<{
+  myPositions: number; myApplications: number; pendingApplications: number;
+  interviewingCount: number; hiredCount: number; rejectedCount: number;
+  conversionRate: number; positionStats: PositionStatItem[]
+}>({
+  myPositions: 0, myApplications: 0, pendingApplications: 0,
+  interviewingCount: 0, hiredCount: 0, rejectedCount: 0,
+  conversionRate: 0, positionStats: []
 })
 
-const wordcloudType = ref('skills')
-const wordcloudData = ref({
-  skills: [],
-  positions: [],
-  requirements: []
+const wordcloudType = ref<keyof WordCloudData>('skills')
+const wordcloudData = ref<WordCloudData>({
+  skills: [], positions: [], requirements: []
 })
 
 const currentWordcloudData = computed(() => {
-  return wordcloudData.value[wordcloudType.value] || []
+  return wordcloudData.value[wordcloudType.value]
 })
 
-const getCompetitionLevel = (index) => {
+const getCompetitionLevel = (index: number) => {
   if (!index) return '数据不足'
   if (index < 2) return '竞争较低'
   if (index < 5) return '竞争一般'
@@ -371,7 +376,7 @@ const getCompetitionLevel = (index) => {
   return '竞争非常激烈'
 }
 
-const getCompetitionType = (index) => {
+const getCompetitionType = (index: number) => {
   if (!index) return 'info'
   if (index < 2) return 'success'
   if (index < 5) return 'warning'

@@ -49,21 +49,6 @@
                 {{ APPLICATION_STATUS_MAP[applicationDetail.status] }}
               </el-tag>
             </div>
-            
-            <div class="ai-score-info" v-if="applicationDetail.aiScore !== null && applicationDetail.aiScore !== undefined">
-              <span class="score-label">AI匹配度：</span>
-              <div class="score-display">
-                <el-rate
-                  v-model="localAiScore"
-                  disabled
-                  allow-half
-                  :max="5"
-                  :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-                  text-color="#ff9900"
-                />
-                <span class="score-value">{{ applicationDetail.aiScore.toFixed(1) }}</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -234,9 +219,6 @@ const statusUpdateLoading = ref(false)
 const targetStatus = ref<ApplicationStatus | null>(null)
 const applicationDetail = ref<ApplicationDetailType['application'] | null>(null)
 
-// AI评分本地变量
-const localAiScore = ref(0)
-
 // 加载投递详情
 const loadApplicationDetail = async () => {
   try {
@@ -267,12 +249,6 @@ const loadApplicationDetail = async () => {
         companyName: props.application.companyName || `公司-${props.application.companyId}`
       }
     }
-    
-    // 设置本地AI评分
-    if (applicationDetail.value?.aiScore) {
-      localAiScore.value = applicationDetail.value.aiScore
-    }
-    
   } catch (error) {
     console.error('加载投递详情失败:', error)
     ElMessage.error('加载投递详情失败')

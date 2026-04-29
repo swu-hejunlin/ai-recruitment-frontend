@@ -1,355 +1,166 @@
-/**
- * 路由配置文件
- * 定义应用的所有路由及导航守卫
- */
-
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
 
-// ==================== 路由定义 ====================
-/**
- * 首页组件（占位，后续会替换）
- */
-import Home from '@/views/Home.vue';
+const Login = () => import('@/views/Login.vue');
+const Home = () => import('@/views/Home.vue');
+const JobSeekerProfile = () => import('@/views/JobSeekerProfile.vue');
+const CompanyProfile = () => import('@/views/CompanyProfile.vue');
+const JobFinder = () => import('@/views/JobFinder.vue');
+const BossPositionManager = () => import('@/views/BossPositionManager.vue');
+const BossApplications = () => import('@/views/BossApplications.vue');
+const SeekerApplications = () => import('@/views/SeekerApplications.vue');
+const CompanyDetail = () => import('@/views/CompanyDetail.vue');
+const BossInterviewManager = () => import('@/views/BossInterviewManager.vue');
+const TalentDiscovery = () => import('@/views/TalentDiscovery.vue');
+const SeekerInterviewList = () => import('@/views/SeekerInterviewList.vue');
+const FavoriteManager = () => import('@/views/FavoriteManager.vue');
+const ResumeAnalyzer = () => import('@/views/ResumeAnalyzer.vue');
+const Statistics = () => import('@/views/Statistics.vue');
+const MockInterview = () => import('@/views/mock-interview/MockInterview.vue');
+const RealInterview = () => import('@/views/mock-interview/RealInterview.vue');
 
-/**
- * 登录页面组件
- */
-import Login from '@/views/Login.vue';
-
-/**
- * 求职者信息管理页面
- */
-import JobSeekerProfile from '@/views/JobSeekerProfile.vue';
-
-/**
- * 企业信息管理页面
- */
-import CompanyProfile from '@/views/CompanyProfile.vue';
-
-/**
- * 岗位发现页面（整合了推荐和搜索）
- */
-import JobFinder from '@/views/JobFinder.vue';
-
-/**
- * BOSS职位管理页面
- */
-import BossPositionManager from '@/views/BossPositionManager.vue';
-
-/**
- * BOSS查看投递记录页面
- */
-import BossApplications from '@/views/BossApplications.vue';
-
-/**
- * 求职者查看投递记录页面
- */
-import SeekerApplications from '@/views/SeekerApplications.vue';
-
-/**
- * 公司详情页面
- */
-import CompanyDetail from '@/views/CompanyDetail.vue';
-
-/**
- * BOSS面试管理页面
- */
-import BossInterviewManager from '@/views/BossInterviewManager.vue';
-
-/**
- * 求职者面试列表页面
- */
-import SeekerInterviewList from '@/views/SeekerInterviewList.vue';
-
-/**
- * 收藏管理页面
- */
-import FavoriteManager from '@/views/FavoriteManager.vue';
-
-/**
- * 简历分析页面
- */
-import ResumeAnalyzer from '@/views/ResumeAnalyzer.vue';
-
-/**
- * 数据统计页面
- */
-import Statistics from '@/views/Statistics.vue';
-
-/**
- * 模拟面试页面
- */
-// 面试相关页面
-import MockInterview from '@/views/mock-interview/MockInterview.vue';
-import RealInterview from '@/views/mock-interview/RealInterview.vue';
-
-/**
- * BOSS职位管理页面（暂用替代方案，实际可以创建单独页面）
- * 我们直接在CompanyProfile中包含职位管理功能
- */
-
-/**
- * 公共路由（无需登录即可访问）
- */
 export const constantRoutes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: {
-      title: '登录',
-      requiresAuth: false
-    }
+    meta: { title: '登录', requiresAuth: false }
   },
   {
     path: '/company/:id(\\d+)',
     name: 'CompanyDetail',
     component: CompanyDetail,
-    meta: {
-      title: '公司详情',
-      requiresAuth: false // 无需登录即可查看
-    }
+    meta: { title: '公司详情', requiresAuth: false }
   }
 ];
 
-/**
- * 异步路由（需要登录才能访问）
- * 根据用户角色动态加载
- */
 export const asyncRoutes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
     component: Home,
-    meta: {
-      title: '首页',
-      requiresAuth: true,
-      roles: [1, 2] // 求职者和企业HR都可访问
-    }
+    meta: { title: '首页', requiresAuth: true, roles: [1, 2] }
   },
   {
     path: '/profile',
     name: 'JobSeekerProfile',
     component: JobSeekerProfile,
-    meta: {
-      title: '我的简历',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '我的简历', requiresAuth: true, roles: [1] }
   },
   {
     path: '/company',
     name: 'CompanyProfile',
     component: CompanyProfile,
-    meta: {
-      title: '企业管理',
-      requiresAuth: true,
-      roles: [2] // 仅企业HR
-    }
+    meta: { title: '企业管理', requiresAuth: true, roles: [2] }
   },
   {
     path: '/discover',
     name: 'JobFinder',
     component: JobFinder,
-    meta: {
-      title: '岗位发现',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '岗位发现', requiresAuth: true, roles: [1] }
   },
   {
     path: '/boss/positions',
     name: 'BossPositionManager',
     component: BossPositionManager,
-    meta: {
-      title: '职位管理',
-      requiresAuth: true,
-      roles: [2] // 仅企业HR
-    }
+    meta: { title: '职位管理', requiresAuth: true, roles: [2] }
   },
   {
     path: '/boss/applications',
     name: 'BossApplications',
     component: BossApplications,
-    meta: {
-      title: '投递管理',
-      requiresAuth: true,
-      roles: [2] // 仅企业HR
-    }
+    meta: { title: '投递管理', requiresAuth: true, roles: [2] }
   },
   {
     path: '/applications',
     name: 'SeekerApplications',
     component: SeekerApplications,
-    meta: {
-      title: '我的投递',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '我的投递', requiresAuth: true, roles: [1] }
   },
   {
     path: '/boss/interviews',
     name: 'BossInterviewManager',
     component: BossInterviewManager,
-    meta: {
-      title: '面试管理',
-      requiresAuth: true,
-      roles: [2] // 仅企业HR
-    }
+    meta: { title: '面试管理', requiresAuth: true, roles: [2] }
+  },
+  {
+    path: '/boss/talent-discovery',
+    name: 'TalentDiscovery',
+    component: TalentDiscovery,
+    meta: { title: '牛人发现', requiresAuth: true, roles: [2] }
   },
   {
     path: '/interviews',
     name: 'SeekerInterviewList',
     component: SeekerInterviewList,
-    meta: {
-      title: '我的面试',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '我的面试', requiresAuth: true, roles: [1] }
   },
   {
     path: '/favorites',
     name: 'FavoriteManager',
     component: FavoriteManager,
-    meta: {
-      title: '我的收藏',
-      requiresAuth: true,
-      roles: [1, 2] // 求职者和企业HR都可访问
-    }
+    meta: { title: '我的收藏', requiresAuth: true, roles: [1, 2] }
   },
   {
     path: '/resume-analyzer',
     name: 'ResumeAnalyzer',
     component: ResumeAnalyzer,
-    meta: {
-      title: '简历智能分析',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '简历智能分析', requiresAuth: true, roles: [1] }
   },
   {
     path: '/statistics',
     name: 'Statistics',
     component: Statistics,
-    meta: {
-      title: '数据统计',
-      requiresAuth: true,
-      roles: [1, 2] // 求职者和企业HR都可访问
-    }
+    meta: { title: '数据统计', requiresAuth: true, roles: [1, 2] }
   },
   {
     path: '/mock-interview',
     name: 'MockInterview',
     component: MockInterview,
-    meta: {
-      title: '模拟面试',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: '模拟面试', requiresAuth: true, roles: [1] }
   },
   {
     path: '/real-interview',
     name: 'RealInterview',
     component: RealInterview,
-    meta: {
-      title: 'AI面试',
-      requiresAuth: true,
-      roles: [1] // 仅求职者
-    }
+    meta: { title: 'AI面试', requiresAuth: true, roles: [1] }
   }
 ];
 
-// ==================== 创建路由实例 ====================
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [...constantRoutes, ...asyncRoutes]
 });
 
-// ==================== 路由守卫 ====================
-/**
- * 全局前置守卫
- * 用于权限控制和路由拦截
- */
-router.beforeEach((to, _from) => {
-  // 设置页面标题
-  if (to.meta && to.meta.title) {
+router.beforeEach((to) => {
+  if (to.meta?.title) {
     document.title = `${to.meta.title} - 智能招聘平台`;
   }
 
   const userStore = useUserStore();
   const isLogin = userStore.isLogin;
+  const requiresAuth = (to.meta as Record<string, unknown>)?.requiresAuth !== false;
 
-  // 记录关键调试信息但不频繁打印
-  if (to.path !== '/' && to.path !== '/login') {
-    console.log(`[路由] 访问 ${to.path}, isLogin: ${isLogin}`);
-  }
-  
-  // 特别关注/profile路由的访问
-  if (to.path === '/profile') {
-    console.log(`[路由/profile] 访问我的简历页面`);
-    console.log(`[路由/profile] store状态:`, {
-      isLogin,
-      token: userStore.token ? userStore.token.substring(0, 30) + '...' : null,
-      userInfo: userStore.userInfo,
-      userRole: userStore.userInfo?.role
-    });
-  }
-
-  // 判断路由是否需要登录
-  const requiresAuth = (to.meta as any)?.requiresAuth !== false;
-
-  // 如果路由需要登录但用户未登录，强制跳转到登录页
   if (requiresAuth && !isLogin) {
-    console.log(`[路由] 用户未登录，强制跳转到登录页`);
-    return {
-      path: '/login',
-      query: { redirect: to.fullPath }
-    };
+    return { path: '/login', query: { redirect: to.fullPath } };
   }
 
-  // 如果用户已登录且访问登录页，跳转到首页
   if (isLogin && to.path === '/login') {
     return '/';
   }
 
-  // 角色权限校验
   if (requiresAuth && isLogin) {
     const userRole = userStore.userInfo?.role;
-    const routeRoles = (to.meta as any)?.roles as number[] | undefined;
-    
-    // 如果路由有角色限制，检查用户角色
+    const routeRoles = (to.meta as Record<string, unknown>)?.roles as number[] | undefined;
+
     if (routeRoles && routeRoles.length > 0) {
       if (!userRole || !routeRoles.includes(userRole)) {
-        console.warn(`路由权限不足: 用户角色 ${userRole} 无法访问 ${to.path}`);
-        
-        // 根据用户角色跳转到相应首页
-        if (userRole === 1) {
-          return '/';
-        } else if (userRole === 2) {
-          return '/';
-        } else {
-          // 角色未识别，跳转到登录页
-          return {
-            path: '/login',
-            query: { redirect: to.fullPath }
-          };
-        }
+        return userRole === 1 || userRole === 2 ? '/' : { path: '/login', query: { redirect: to.fullPath } };
       }
     }
   }
 
-  // 正常通过
   return true;
 });
 
-/**
- * 全局后置钩子
- * 用于处理路由跳转后的逻辑
- */
-router.afterEach((to) => {
-  console.log(`[路由跳转] ${to.path}`);
-});
-
-// ==================== 导出路由 ====================
 export default router;

@@ -1,877 +1,281 @@
-/**
- * API 服务层
- * 封装所有与后端交互的接口
- */
-
 import request from '@/utils/request';
 import type {
-  JobSeekerInfo,
-  JobSeekerFullInfo,
-  UpdateJobSeekerRequest,
-  CompanyInfo,
-  UpdateCompanyRequest,
-  FileUploadResponse,
-  FileType,
-  WorkExperience,
-  AddWorkExperienceRequest,
-  UpdateWorkExperienceRequest,
-  ProjectExperience,
-  AddProjectExperienceRequest,
-  UpdateProjectExperienceRequest,
-  EducationExperience,
-  AddEducationExperienceRequest,
-  UpdateEducationExperienceRequest,
-  PositionInfo,
-  PositionDetail,
-  AddPositionRequest,
-  UpdatePositionRequest,
-  QueryPositionRequest,
-  PaginatedResponse,
-  EducationLevel,
-  ApplicationInfo,
-  ApplicationDetail,
-  ApplyPositionRequest,
-  UpdateApplicationStatusRequest,
-  QueryBossApplicationRequest,
-  QuerySeekerApplicationRequest,
-  PositionFromApplication,
-  CompanyFromApplication,
-  JobSeekerFromApplication,
-  NotificationInfo,
-  UnreadNotificationCount,
-  QueryNotificationRequest,
-  MarkNotificationReadRequest
+  JobSeekerInfo, JobSeekerFullInfo, UpdateJobSeekerRequest,
+  CompanyInfo, UpdateCompanyRequest,
+  FileUploadResponse, FileType,
+  WorkExperience, AddWorkExperienceRequest, UpdateWorkExperienceRequest,
+  ProjectExperience, AddProjectExperienceRequest, UpdateProjectExperienceRequest,
+  EducationExperience, AddEducationExperienceRequest, UpdateEducationExperienceRequest,
+  PositionInfo, PositionDetail, AddPositionRequest, UpdatePositionRequest,
+  QueryPositionRequest, PaginatedResponse,
+  ApplicationInfo, ApplicationDetail, ApplyPositionRequest,
+  UpdateApplicationStatusRequest, QueryBossApplicationRequest, QuerySeekerApplicationRequest,
+  PositionFromApplication, CompanyFromApplication, JobSeekerFromApplication,
+  NotificationInfo, UnreadNotificationCount, QueryNotificationRequest, MarkNotificationReadRequest,
+  JobProfileResponse, TalentProfileResponse,
+  JobRecommendResponse, TalentRecommendResponse,
+  InterviewInfo, InterviewDetail, MockInterviewResponse, InterviewEvaluationData,
+  SeekerStatistics, BossStatistics, WordCloudData,
+  SmartFillResponse
 } from '@/types';
 
-// ==================== 工具函数 ====================
-/**
- * 类型断言：响应拦截器返回的是data部分
- */
-function toData<T>(promise: Promise<any>): Promise<T> {
-  return promise as Promise<T>;
+function toData<T>(promise: Promise<T>): Promise<T> {
+  return promise;
 }
 
-// ==================== 求职者 API ====================
+export const getJobSeekerInfo = () => toData<JobSeekerFullInfo>(request.get('/api/job-seeker/info'));
 
-/**
- * 获取求职者信息
- */
-export const getJobSeekerInfo = () => {
-  return toData<JobSeekerInfo>(request.get('/api/job-seeker/info'));
-};
+export const updateJobSeekerInfo = (data: UpdateJobSeekerRequest) => toData<null>(request.put('/api/job-seeker/update', data));
 
-/**
- * 更新求职者信息
- */
-export const updateJobSeekerInfo = (data: UpdateJobSeekerRequest) => {
-  return toData<null>(request.put('/api/job-seeker/update', data));
-};
-
-/**
- * 上传头像
- * @param avatarUrl - 头像URL（需先通过文件上传接口获取）
- */
 export const uploadAvatar = (avatarUrl: string) => {
   const formData = new FormData();
   formData.append('avatarUrl', avatarUrl);
-  
   return toData<null>(request.post('/api/job-seeker/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-/**
- * 查看头像
- * 获取当前求职者的头像URL
- */
-export const getAvatar = () => {
-  return toData<string | null>(request.get('/api/job-seeker/avatar'));
-};
+export const getAvatar = () => toData<string | null>(request.get('/api/job-seeker/avatar'));
 
-/**
- * 上传简历
- * @param resumeUrl - 简历URL（需先通过文件上传接口获取）
- */
 export const uploadResume = (resumeUrl: string) => {
   const formData = new FormData();
   formData.append('resumeUrl', resumeUrl);
-  
   return toData<null>(request.post('/api/job-seeker/resume', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-/**
- * 查看简历
- * 获取当前求职者的简历URL
- */
-export const getResume = () => {
-  return toData<string | null>(request.get('/api/job-seeker/resume'));
-};
+export const getResume = () => toData<string | null>(request.get('/api/job-seeker/resume'));
 
-// ==================== 企业 API ====================
+export const getCompanyInfo = () => toData<CompanyInfo>(request.get('/api/company/info'));
 
-/**
- * 获取企业信息
- */
-export const getCompanyInfo = () => {
-  return toData<CompanyInfo>(request.get('/api/company/info'));
-};
+export const updateCompanyInfo = (data: UpdateCompanyRequest) => toData<null>(request.put('/api/company/update', data));
 
-/**
- * 更新企业信息
- */
-export const updateCompanyInfo = (data: UpdateCompanyRequest) => {
-  return toData<null>(request.put('/api/company/update', data));
-};
-
-/**
- * 上传企业Logo
- * @param logoUrl - Logo URL（需先通过文件上传接口获取）
- */
 export const uploadCompanyLogo = (logoUrl: string) => {
   const formData = new FormData();
   formData.append('logoUrl', logoUrl);
-  
   return toData<null>(request.post('/api/company/logo', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-/**
- * 上传营业执照
- * @param licenseUrl - 营业执照URL（需先通过文件上传接口获取）
- */
 export const uploadBusinessLicense = (licenseUrl: string) => {
   const formData = new FormData();
   formData.append('licenseUrl', licenseUrl);
-  
   return toData<null>(request.post('/api/company/license', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-// ==================== 文件上传 API ====================
-
-/**
- * 上传文件到OSS
- * @param file - 要上传的文件
- * @param fileType - 文件类型
- */
 export const uploadFile = (file: File, fileType: FileType) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('fileType', fileType);
-
   return toData<FileUploadResponse>(request.post('/api/file/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-/**
- * 批量上传文件到OSS
- * @param files - 要上传的文件列表
- * @param fileType - 文件类型
- */
 export const uploadFilesBatch = (files: File[], fileType: FileType) => {
   const formData = new FormData();
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
+  files.forEach((file) => formData.append('files', file));
   formData.append('fileType', fileType);
-
   return toData<FileUploadResponse[]>(request.post('/api/file/upload-batch', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    headers: { 'Content-Type': 'multipart/form-data' }
   }));
 };
 
-// ==================== 新增公司详情接口 ====================
+export const getCompanyById = (id: number) => toData<CompanyInfo>(request.get(`/api/company/${id}`));
 
-/**
- * 根据ID查询公司详情
- * @param id - 公司ID
- */
-export const getCompanyById = (id: number) => {
-  return toData<CompanyInfo>(request.get(`/api/company/${id}`));
-};
+export const deleteFile = (fileUrl: string) => toData<null>(request.delete('/api/file/delete', { params: { fileUrl } }));
 
-/**
- * 删除文件
- * @param fileUrl - 要删除的文件URL
- */
-export const deleteFile = (fileUrl: string) => {
-  return toData<null>(request.delete('/api/file/delete', { params: { fileUrl } }));
-};
+export const getWorkExperiences = () => toData<WorkExperience[]>(request.get('/api/experience/list'));
 
-// ==================== 工作/实习经历 API ====================
+export const addWorkExperience = (data: AddWorkExperienceRequest) => toData<null>(request.post('/api/experience/add', data));
 
-/**
- * 获取工作/实习经历列表
- */
-export const getWorkExperiences = () => {
-  return toData<WorkExperience[]>(request.get('/api/experience/list'));
-};
+export const updateWorkExperience = (data: UpdateWorkExperienceRequest) => toData<null>(request.put('/api/experience/update', data));
 
-/**
- * 新增工作/实习经历
- * @param data - 经历数据
- */
-export const addWorkExperience = (data: AddWorkExperienceRequest) => {
-  return toData<null>(request.post('/api/experience/add', data));
-};
+export const deleteWorkExperience = (id: number) => toData<null>(request.delete('/api/experience/delete', { params: { id } }));
 
-/**
- * 更新工作/实习经历
- * @param data - 经历数据
- */
-export const updateWorkExperience = (data: UpdateWorkExperienceRequest) => {
-  return toData<null>(request.put('/api/experience/update', data));
-};
+export const getProjectExperiences = () => toData<ProjectExperience[]>(request.get('/api/project/list'));
 
-/**
- * 删除工作/实习经历
- * @param id - 经历ID
- */
-export const deleteWorkExperience = (id: number) => {
-  return toData<null>(request.delete('/api/experience/delete', { params: { id } }));
-};
+export const addProjectExperience = (data: AddProjectExperienceRequest) => toData<null>(request.post('/api/project/add', data));
 
-// ==================== 项目经历 API ====================
+export const updateProjectExperience = (data: UpdateProjectExperienceRequest) => toData<null>(request.put('/api/project/update', data));
 
-/**
- * 获取项目经历列表
- */
-export const getProjectExperiences = () => {
-  return toData<ProjectExperience[]>(request.get('/api/project/list'));
-};
+export const deleteProjectExperience = (id: number) => toData<null>(request.delete('/api/project/delete', { params: { id } }));
 
-/**
- * 新增项目经历
- * @param data - 项目数据
- */
-export const addProjectExperience = (data: AddProjectExperienceRequest) => {
-  return toData<null>(request.post('/api/project/add', data));
-};
+export const getEducationExperiences = () => toData<EducationExperience[]>(request.get('/api/education/list'));
 
-/**
- * 更新项目经历
- * @param data - 项目数据
- */
-export const updateProjectExperience = (data: UpdateProjectExperienceRequest) => {
-  return toData<null>(request.put('/api/project/update', data));
-};
+export const addEducationExperience = (data: AddEducationExperienceRequest) => toData<null>(request.post('/api/education/add', data));
 
-/**
- * 删除项目经历
- * @param id - 项目ID
- */
-export const deleteProjectExperience = (id: number) => {
-  return toData<null>(request.delete('/api/project/delete', { params: { id } }));
-};
+export const updateEducationExperience = (data: UpdateEducationExperienceRequest) => toData<null>(request.put('/api/education/update', data));
 
-/**
- * 获取教育经历列表
- */
-export const getEducationExperiences = () => {
-  return toData<EducationExperience[]>(request.get('/api/education/list'));
-};
+export const deleteEducationExperience = (id: number) => toData<null>(request.delete('/api/education/delete', { params: { id } }));
 
-/**
- * 新增教育经历
- * @param data - 教育经历数据
- */
-export const addEducationExperience = (data: AddEducationExperienceRequest) => {
-  return toData<null>(request.post('/api/education/add', data));
-};
+export const getBossPositionList = (pageNum?: number, pageSize?: number) => toData<PaginatedResponse<PositionInfo>>(
+  request.get('/api/position/boss/list', { params: { pageNum, pageSize } })
+);
 
-/**
- * 更新教育经历
- * @param data - 教育经历数据
- */
-export const updateEducationExperience = (data: UpdateEducationExperienceRequest) => {
-  return toData<null>(request.put('/api/education/update', data));
-};
+export const getPositionList = (params?: QueryPositionRequest) => toData<PaginatedResponse<PositionInfo>>(
+  request.get('/api/position/list', { params })
+);
 
-/**
- * 删除教育经历
- * @param id - 教育经历ID
- */
-export const deleteEducationExperience = (id: number) => {
-  return toData<null>(request.delete('/api/education/delete', { params: { id } }));
-};
+export const getPositionDetail = (id: number) => toData<PositionDetail>(request.get('/api/position/detail', { params: { id } }));
 
-// ==================== 职位模块 API ====================
+export const getPositionsByCompany = (companyId: number) => toData<PositionInfo[]>(request.get('/api/position/company', { params: { companyId } }));
 
-/**
- * Boss查询自己发布的职位列表
- * @param pageNum - 页码，默认1
- * @param pageSize - 每页数量，默认10
- */
-export const getBossPositionList = (pageNum?: number, pageSize?: number) => {
-  return toData<PaginatedResponse<PositionInfo>>(
-    request.get('/api/position/boss/list', { params: { pageNum, pageSize } })
-  );
-};
+export const getPositionDetailWithCompany = (id: number) => toData<{ position: PositionInfo; company: CompanyInfo }>(
+  request.get('/api/position/detail-with-company', { params: { id } })
+);
 
-/**
- * 求职者查询职位列表
- * @param params - 查询参数
- */
-export const getPositionList = (params?: QueryPositionRequest) => {
-  return toData<PaginatedResponse<PositionInfo>>(
-    request.get('/api/position/list', { params })
-  );
-};
+export const getLatestPositions = (limit?: number) => toData<PositionInfo[]>(request.get('/api/position/latest', { params: { limit } }));
 
-/**
- * 查询职位详情
- * @param id - 职位ID
- */
-export const getPositionDetail = (id: number) => {
-  return toData<PositionDetail>(request.get('/api/position/detail', { params: { id } }));
-};
+export const getHotPositions = (limit?: number) => toData<PositionInfo[]>(request.get('/api/position/hot', { params: { limit } }));
 
-/**
- * 根据公司查询职位
- * @param companyId - 公司ID
- */
-export const getPositionsByCompany = (companyId: number) => {
-  return toData<PositionInfo[]>(request.get('/api/position/company', { params: { companyId } }));
-};
+export const addPosition = (data: AddPositionRequest) => toData<null>(request.post('/api/position/add', data));
 
-/**
- * 获取职位详情（含公司信息）
- * @param id - 职位ID
- */
-export const getPositionDetailWithCompany = (id: number) => {
-  return toData<{
-    position: PositionInfo;
-    company: CompanyInfo;
-  }>(request.get('/api/position/detail-with-company', { params: { id } }));
-};
+export const updatePosition = (data: UpdatePositionRequest) => toData<null>(request.put('/api/position/update', data));
 
-/**
- * 获取最新职位列表（首页推荐）
- * @param limit - 返回数量限制，默认10
- */
-export const getLatestPositions = (limit?: number) => {
-  return toData<PositionInfo[]>(request.get('/api/position/latest', { params: { limit } }));
-};
+export const deletePosition = (id: number) => toData<null>(request.delete('/api/position/delete', { params: { id } }));
 
-/**
- * 获取热门职位列表（首页推荐）
- * @param limit - 返回数量限制，默认10
- */
-export const getHotPositions = (limit?: number) => {
-  return toData<PositionInfo[]>(request.get('/api/position/hot', { params: { limit } }));
-};
+export const closePosition = (id: number) => toData<null>(request.put('/api/position/close', null, { params: { id } }));
 
-/**
- * 发布新职位
- * @param data - 职位数据
- */
-export const addPosition = (data: AddPositionRequest) => {
-  return toData<null>(request.post('/api/position/add', data));
-};
+export const openPosition = (id: number) => toData<null>(request.put('/api/position/open', null, { params: { id } }));
 
-/**
- * 更新职位信息
- * @param data - 职位数据
- */
-export const updatePosition = (data: UpdatePositionRequest) => {
-  return toData<null>(request.put('/api/position/update', data));
-};
-
-/**
- * 删除职位
- * @param id - 职位ID
- */
-export const deletePosition = (id: number) => {
-  return toData<null>(request.delete('/api/position/delete', { params: { id } }));
-};
-
-/**
- * 关闭职位（停止招聘）
- * @param id - 职位ID
- */
-export const closePosition = (id: number) => {
-  return toData<null>(request.put('/api/position/close', null, { params: { id } }));
-};
-
-/**
- * 开启职位（重新开始招聘）
- * @param id - 职位ID
- */
-export const openPosition = (id: number) => {
-  return toData<null>(request.put('/api/position/open', null, { params: { id } }));
-};
-
-// ==================== 投递 API ====================
-
-/**
- * 投递简历
- * @param data - 投递请求数据
- */
 export const applyPosition = (data: ApplyPositionRequest) => {
-  // 创建URLSearchParams对象来处理form-data
   const formData = new URLSearchParams();
   formData.append('positionId', data.positionId.toString());
-  
   return toData<null>(request.post('/api/application/apply', formData, {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
   }));
 };
 
-/**
- * Boss查询收到的投递列表
- * @param params - 查询参数
- */
-export const getBossApplications = (params?: QueryBossApplicationRequest) => {
-  return toData<PaginatedResponse<ApplicationInfo>>(
-    request.get('/api/application/boss/list', { params })
-  );
-};
+export const getBossApplications = (params?: QueryBossApplicationRequest) => toData<PaginatedResponse<ApplicationInfo>>(
+  request.get('/api/application/boss/list', { params })
+);
 
-/**
- * 求职者查询投递列表
- * @param params - 查询参数
- */
-export const getSeekerApplications = (params?: QuerySeekerApplicationRequest) => {
-  return toData<PaginatedResponse<ApplicationInfo>>(
-    request.get('/api/application/seeker/list', { params })
-  );
-};
+export const getSeekerApplications = (params?: QuerySeekerApplicationRequest) => toData<PaginatedResponse<ApplicationInfo>>(
+  request.get('/api/application/seeker/list', { params })
+);
 
-/**
- * 查看投递详情
- * @param id - 投递记录ID
- */
-export const getApplicationDetail = (id: number) => {
-  return toData<ApplicationDetail>(request.get('/api/application/detail', { params: { id } }));
-};
+export const getApplicationDetail = (id: number) => toData<ApplicationDetail>(request.get('/api/application/detail', { params: { id } }));
 
-/**
- * 根据投递记录查看职位信息
- * @param id - 投递记录ID
- */
-export const getPositionFromApplication = (id: number) => {
-  return toData<PositionFromApplication>(request.get('/api/application/position', { params: { id } }));
-};
+export const getPositionFromApplication = (id: number) => toData<PositionFromApplication>(request.get('/api/application/position', { params: { id } }));
 
-/**
- * 根据投递记录查看公司信息
- * @param id - 投递记录ID
- */
-export const getCompanyFromApplication = (id: number) => {
-  return toData<CompanyFromApplication>(request.get('/api/application/company', { params: { id } }));
-};
+export const getCompanyFromApplication = (id: number) => toData<CompanyFromApplication>(request.get('/api/application/company', { params: { id } }));
 
-/**
- * BOSS查看求职者简要信息
- * @param id - 投递记录ID
- */
-export const getJobSeekerSimpleFromApplication = (id: number) => {
-  return toData<JobSeekerFromApplication>(request.get('/api/application/job-seeker/simple', { params: { id } }));
-};
+export const getJobSeekerSimpleFromApplication = (id: number) => toData<JobSeekerFromApplication>(request.get('/api/application/job-seeker/simple', { params: { id } }));
 
-/**
- * BOSS查看求职者信息（简历）- 兼容旧版本
- * @deprecated 使用 getJobSeekerSimpleFromApplication 替代
- * @param id - 投递记录ID
- */
-export const getJobSeekerFromApplication = (id: number) => {
-  return getJobSeekerSimpleFromApplication(id);
-};
+export const getJobSeekerFromApplication = (id: number) => getJobSeekerSimpleFromApplication(id);
 
-/**
- * BOSS查看求职者完整在线简历
- * @param id - 投递记录ID
- */
-export const getJobSeekerFullResume = (id: number) => {
-  return toData<JobSeekerFullInfo>(request.get('/api/application/job-seeker/resume', { params: { id } }));
-};
+export const getJobSeekerFullResume = (id: number) => toData<JobSeekerFullInfo>(request.get('/api/application/job-seeker/resume', { params: { id } }));
 
-/**
- * 标记简历为已查看
- * @param id - 投递记录ID
- */
-export const markApplicationAsRead = (id: number) => {
-  return toData<null>(request.put('/api/application/read', null, { params: { id } }));
-};
+export const markApplicationAsRead = (id: number) => toData<null>(request.put('/api/application/read', null, { params: { id } }));
 
-/**
- * 更新投递状态
- * @param params - 更新参数（id和status）
- */
-export const updateApplicationStatus = (params: UpdateApplicationStatusRequest) => {
-  return toData<null>(request.put('/api/application/status', null, { params }));
-};
+export const updateApplicationStatus = (params: UpdateApplicationStatusRequest) => toData<null>(request.put('/api/application/status', null, { params }));
 
-// ==================== 通知 API ====================
+export const getNotifications = (params?: QueryNotificationRequest) => toData<PaginatedResponse<NotificationInfo>>(
+  request.get('/api/notification/list', { params })
+);
 
-/**
- * 获取通知列表
- * @param params - 查询参数
- */
-export const getNotifications = (params?: QueryNotificationRequest) => {
-  return toData<PaginatedResponse<NotificationInfo>>(
-    request.get('/api/notification/list', { params })
-  );
-};
+export const getUnreadNotificationCount = () => toData<UnreadNotificationCount>(request.get('/api/notification/unread-count'));
 
-/**
- * 获取未读通知数量
- */
-export const getUnreadNotificationCount = () => {
-  return toData<UnreadNotificationCount>(request.get('/api/notification/unread-count'));
-};
+export const markNotificationRead = (params: MarkNotificationReadRequest) => toData<null>(request.put('/api/notification/read', null, { params }));
 
-/**
- * 标记通知为已读
- * @param params - 通知ID
- */
-export const markNotificationRead = (params: MarkNotificationReadRequest) => {
-  return toData<null>(request.put('/api/notification/read', null, { params }));
-};
+export const markAllNotificationsRead = () => toData<null>(request.put('/api/notification/read-all'));
 
-/**
- * 标记通知为已读（简化版本）
- * @param id - 通知ID
- */
-export const markAsRead = (id: number) => {
-  return toData<null>(request.put('/api/notification/read', null, { params: { id } }));
-};
+export const createInterview = (data: {
+  applicationId: number; interviewTime: string; interviewType: number;
+  interviewAddress?: string; interviewLink?: string; remark?: string
+}) => toData<number>(request.post('/api/interview/create', data));
 
-/**
- * 标记所有通知为已读
- */
-export const markAllNotificationsRead = () => {
-  return toData<null>(request.put('/api/notification/read-all'));
-};
+export const updateInterviewStatus = (id: number, status: number) => toData<null>(request.put(`/api/interview/${id}/status`, null, { params: { status } }));
 
-/**
- * 标记所有通知为已读（简化版本）
- */
-export const markAllAsRead = () => {
-  return toData<null>(request.put('/api/notification/read-all'));
-};
+export const getCompanyInterviews = () => toData<InterviewInfo[]>(request.get('/api/interview/company/list'));
 
-// ==================== 面试 API ====================
+export const getJobSeekerInterviews = () => toData<InterviewInfo[]>(request.get('/api/interview/job-seeker/list'));
 
-/**
- * 创建面试邀请
- * @param data - 面试请求数据
- */
-export const createInterview = (data: { applicationId: number; interviewTime: string; interviewType: number; interviewAddress?: string; interviewLink?: string; remark?: string }) => {
-  return toData<number>(request.post('/api/interview/create', data));
-};
+export const getInterviewDetail = (id: number) => toData<InterviewDetail>(request.get(`/api/interview/${id}`));
 
-/**
- * 更新面试状态
- * @param id - 面试ID
- * @param status - 面试状态
- */
-export const updateInterviewStatus = (id: number, status: number) => {
-  return toData<null>(request.put(`/api/interview/${id}/status`, null, { params: { status } }));
-};
+export const deleteInterview = (id: number) => toData<null>(request.delete(`/api/interview/${id}`));
 
-/**
- * 获取企业HR的面试列表
- */
-export const getCompanyInterviews = () => {
-  return toData<any[]>(request.get('/api/interview/company/list'));
-};
+export const addFavorite = (targetType: number, targetId: number) => toData<null>(request.post('/api/favorite/add', null, { params: { targetType, targetId } }));
 
-/**
- * 获取求职者的面试列表
- */
-export const getJobSeekerInterviews = () => {
-  return toData<any[]>(request.get('/api/interview/job-seeker/list'));
-};
+export const removeFavorite = (targetType: number, targetId: number) => toData<null>(request.delete('/api/favorite/remove', { params: { targetType, targetId } }));
 
-/**
- * 获取面试详情
- * @param id - 面试ID
- */
-export const getInterviewDetail = (id: number) => {
-  return toData<any>(request.get(`/api/interview/${id}`));
-};
+export const getFavorites = (targetType: number) => toData<any[]>(request.get('/api/favorite/list', { params: { targetType } }));
 
-/**
- * 删除面试
- * @param id - 面试ID
- */
-export const deleteInterview = (id: number) => {
-  return toData<null>(request.delete(`/api/interview/${id}`));
-};
+export const checkFavorite = (targetType: number, targetId: number) => toData<{ isFavorite: boolean }>(request.get('/api/favorite/check', { params: { targetType, targetId } }));
 
-// ==================== 收藏 API ====================
+export const uploadAndAnalyzeResume = (formData: FormData) => toData<SmartFillResponse>(request.post('/api/resume/upload-and-analyze', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0
+}));
 
-/**
- * 添加收藏
- * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
- * @param targetId - 目标ID
- */
-export const addFavorite = (targetType: number, targetId: number) => {
-  return toData<null>(request.post('/api/favorite/add', null, { params: { targetType, targetId } }));
-};
+export const analyzeResume = (requestData: Record<string, unknown>) => toData<SmartFillResponse>(request.post('/api/resume/analyze', requestData, { timeout: 0 }));
 
-/**
- * 取消收藏
- * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
- * @param targetId - 目标ID
- */
-export const removeFavorite = (targetType: number, targetId: number) => {
-  return toData<null>(request.delete('/api/favorite/remove', { params: { targetType, targetId } }));
-};
+export const smartFillResume = (formData: FormData) => toData<SmartFillResponse>(request.post('/api/resume/smart-fill', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }, timeout: 0
+}));
 
-/**
- * 获取收藏列表
- * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
- */
-export const getFavorites = (targetType: number) => {
-  return toData<any[]>(request.get('/api/favorite/list', { params: { targetType } }));
-};
+export const generateJobProfile = (positionId: number) => toData<JobProfileResponse>(request.post(`/api/job-profile/generate/${positionId}`));
 
-/**
- * 检查是否已收藏
- * @param targetType - 收藏类型：1-职位，2-公司，3-求职者
- * @param targetId - 目标ID
- */
-export const checkFavorite = (targetType: number, targetId: number) => {
-  return toData<{ isFavorite: boolean }>(request.get('/api/favorite/check', { params: { targetType, targetId } }));
-};
+export const getJobProfile = (positionId: number) => toData<JobProfileResponse>(request.get(`/api/job-profile/${positionId}`));
 
-// ==================== 简历分析 API ====================
+export const updateJobProfile = (positionId: number) => toData<JobProfileResponse>(request.put(`/api/job-profile/update/${positionId}`));
 
-/**
- * 上传并分析简历
- * @param formData - 包含简历文件的FormData
- */
-export const uploadAndAnalyzeResume = (formData: FormData) => {
-  return toData<any>(request.post('/api/resume/upload-and-analyze', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
-  }));
-};
+export const deleteJobProfile = (positionId: number) => toData<null>(request.delete(`/api/job-profile/${positionId}`));
 
-/**
- * 分析简历
- * @param requestData - 简历分析请求数据
- */
-export const analyzeResume = (requestData: any) => {
-  return toData<any>(request.post('/api/resume/analyze', requestData, {
-    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
-  }));
-};
+export const generateTalentProfile = () => toData<TalentProfileResponse>(request.post('/api/talent-profile/generate'));
 
-/**
- * 智能填充简历信息
- * @param formData - 包含简历文件的FormData
- */
-export const smartFillResume = (formData: FormData) => {
-  return toData<any>(request.post('/api/resume/smart-fill', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    timeout: 0 // 0表示无超时限制，一直等待后端返回结果
-  }));
-};
+export const getTalentProfile = () => toData<TalentProfileResponse>(request.get('/api/talent-profile'));
 
-// ==================== 岗位画像 API ====================
+export const updateTalentProfile = () => toData<TalentProfileResponse>(request.put('/api/talent-profile/update'));
 
-/**
- * 生成岗位画像
- * @param positionId - 岗位ID
- */
-export const generateJobProfile = (positionId: number) => {
-  return toData<any>(request.post(`/api/job-profile/generate/${positionId}`));
-};
+export const deleteTalentProfile = () => toData<null>(request.delete('/api/talent-profile'));
 
-/**
- * 获取岗位画像
- * @param positionId - 岗位ID
- */
-export const getJobProfile = (positionId: number) => {
-  return toData<any>(request.get(`/api/job-profile/${positionId}`));
-};
+export const getJobRecommendations = (limit?: number) => toData<JobRecommendResponse[]>(request.get('/api/job-recommend', { params: { limit } }));
 
-/**
- * 更新岗位画像
- * @param positionId - 岗位ID
- */
-export const updateJobProfile = (positionId: number) => {
-  return toData<any>(request.put(`/api/job-profile/update/${positionId}`));
-};
+export const getMatchDetails = (positionId: number) => toData<JobRecommendResponse>(request.get(`/api/job-recommend/match/${positionId}`));
 
-/**
- * 删除岗位画像
- * @param positionId - 岗位ID
- */
-export const deleteJobProfile = (positionId: number) => {
-  return toData<any>(request.delete(`/api/job-profile/${positionId}`));
-};
+export const batchGenerateMatchRecords = () => toData<null>(request.post('/api/job-recommend/batch-generate'));
 
-// ==================== 人才画像 API ====================
+export const markAsViewed = (recordId: number) => toData<null>(request.put(`/api/job-recommend/viewed/${recordId}`));
 
-/**
- * 生成人才画像
- */
-export const generateTalentProfile = () => {
-  return toData<any>(request.post('/api/talent-profile/generate'));
-};
+export const getTalentRecommendations = (positionId?: number, limit?: number) => toData<TalentRecommendResponse[]>(request.get('/api/talent-recommend', {
+  params: { positionId, limit }
+}));
 
-/**
- * 获取人才画像
- */
-export const getTalentProfile = () => {
-  return toData<any>(request.get('/api/talent-profile'));
-};
+export const getTalentMatchDetails = (jobSeekerId: number, positionId: number) => toData<TalentRecommendResponse>(request.get('/api/talent-recommend/match', {
+  params: { jobSeekerId, positionId }
+}));
 
-/**
- * 更新人才画像
- */
-export const updateTalentProfile = () => {
-  return toData<any>(request.put('/api/talent-profile/update'));
-};
+export const batchGenerateTalentMatchRecords = (positionId: number) => toData<null>(request.post('/api/talent-recommend/batch-generate', {}, { params: { positionId } }));
 
-/**
- * 删除人才画像
- */
-export const deleteTalentProfile = () => {
-  return toData<any>(request.delete('/api/talent-profile'));
-};
+export const markTalentAsViewed = (recordId: number) => toData<null>(request.put(`/api/talent-recommend/viewed/${recordId}`));
 
-// ==================== 岗位推荐 API ====================
+export const getSeekerStatistics = () => toData<SeekerStatistics>(request.get('/api/statistics/seeker'));
 
-/**
- * 获取岗位推荐列表
- * @param limit - 推荐数量限制
- */
-export const getJobRecommendations = (limit?: number) => {
-  return toData<any>(request.get('/api/job-recommend', {
-    params: { limit }
-  }));
-};
+export const getBossStatistics = () => toData<BossStatistics>(request.get('/api/statistics/boss'));
 
-/**
- * 获取匹配度详情
- * @param positionId - 岗位ID
- */
-export const getMatchDetails = (positionId: number) => {
-  return toData<any>(request.get(`/api/job-recommend/match/${positionId}`));
-};
+export const getWordCloudData = () => toData<WordCloudData>(request.get('/api/statistics/wordcloud'));
 
-/**
- * 批量生成匹配记录
- */
-export const batchGenerateMatchRecords = () => {
-  return toData<any>(request.post('/api/job-recommend/batch-generate'));
-};
+export const submitMockInterview = (formData: FormData, interviewId?: number, sessionKey?: string) => toData<MockInterviewResponse>(request.post('/api/interview/mock', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+  params: { ...(interviewId && { interviewId }), ...(sessionKey && { sessionKey }) }
+}));
 
-/**
- * 标记为已查看
- * @param recordId - 记录ID
- */
-export const markAsViewed = (recordId: number) => {
-  return toData<any>(request.put(`/api/job-recommend/viewed/${recordId}`));
-};
-
-// ==================== 数据统计 API ====================
-
-/**
- * 获取求职者端统计数据
- */
-export const getSeekerStatistics = () => {
-  return toData<any>(request.get('/api/statistics/seeker'));
-};
-
-/**
- * 获取HR端统计数据
- */
-export const getBossStatistics = () => {
-  return toData<any>(request.get('/api/statistics/boss'));
-};
-
-/**
- * 获取词云数据
- */
-export const getWordCloudData = () => {
-  return toData<any>(request.get('/api/statistics/wordcloud'));
-};
-
-/**
- * 提交模拟面试视频
- */
-export const submitMockInterview = (formData: FormData, interviewId?: number, sessionKey?: string) => {
-  return toData<any>(request.post('/api/interview/mock', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    params: { ...(interviewId && { interviewId }), ...(sessionKey && { sessionKey }) }
-  }));
-};
-
-/**
- * 生成模拟面试题
- */
 export const generateMockInterviewQuestions = (
-  interviewId?: number,
-  positionName?: string,
-  positionCategory?: string,
-  city?: string,
-  description?: string,
-  requirement?: string
-) => {
-  return toData<any>(request.get('/api/interview/mock/questions', {
-    params: { 
-      interviewId, 
-      positionName,
-      positionCategory,
-      city,
-      description,
-      requirement
-    }
-  }));
-};
+  interviewId?: number, positionName?: string, positionCategory?: string,
+  city?: string, description?: string, requirement?: string
+) => toData<MockInterviewResponse>(request.get('/api/interview/mock/questions', {
+  params: { interviewId, positionName, positionCategory, city, description, requirement }
+}));
 
-/**
- * 结束真实AI面试
- */
-export const finishInterview = (formData: FormData) => {
-  return toData<any>(request.post('/api/interview/finish', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }));
-};
+export const finishInterview = (formData: FormData) => toData<MockInterviewResponse>(request.post('/api/interview/finish', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+}));
 
-/**
- * 获取面试评估结果
- */
-export const getInterviewEvaluation = (interviewId: number) => {
-  return toData<any>(request.get(`/api/interview/evaluation/${interviewId}`));
-};
+export const getInterviewEvaluation = (interviewId: number) => toData<InterviewEvaluationData>(request.get(`/api/interview/evaluation/${interviewId}`));
 
-/**
- * 检查面试评估结果是否存在
- */
-export const checkInterviewEvaluationExists = (interviewId: number) => {
-  return toData<any>(request.get(`/api/interview/evaluation/${interviewId}/exists`));
-};
+export const checkInterviewEvaluationExists = (interviewId: number) => toData<{ exists: boolean }>(request.get(`/api/interview/evaluation/${interviewId}/exists`));
